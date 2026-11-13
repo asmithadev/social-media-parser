@@ -4,7 +4,9 @@ const prisma = require('../config/db-config');
 
 const loginSchema = z.object({
   email: z.string().trim().pipe(z.email()),
-  password: z.string().min(1),
+  password: z.string().min(1).refine(
+  (password) => Buffer.byteLength(password, 'utf8') <= 72
+),
 });
 
 async function login(req, res) {
