@@ -1,0 +1,289 @@
+// Social Media Evidence Capture and Documentation Tool
+// 14 PostgreSQL models. PARSED_ARTIFACTS lives in MongoDB (Mongoose), not here.
+// CHECK constraints and triggers that Prisma cannot express are added by hand
+// in the migration SQL (see prisma/migrations/*_init/migration.sql).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- enums ----------
+
+enum Role {
+  admin
+  examiner
+  reviewer
+
+  @@map("user_role")
+}
+
+enum CaseStatus {
+  open
+  closed
+
+  @@map("case_status")
+}
+
+enum Involvement {
+  suspect
+  accused
+
+  @@map("involvement_type")
+}
+
+enum DeviceType {
+  macos
+  ios
+
+  @@map("device_type")
+}
+
+enum SessionStatus {
+  open
+  completed
+  failed
+
+  @@map("session_status")
+}
+
+enum ParseStatus {
+  pending
+  parsed
+  failed
+
+  @@map("parse_status")
+}
+
+// ---------- access and cases ----------
+
+model User {
+  id           Int      @id @default(autoincrement()) @map("user_id")
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  fullName     String   @map("full_name") @db.VarChar(150)
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  casesCreated     Case[]           @relation("CaseCreator")
+  assignments      CaseAssignment[]
+  reportsGenerated Report[]         @relation("ReportGenerator")
+  reportsApproved  Report[]         @relation("ReportApprover")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Case {
+  id          Int        @id @default(autoincrement()) @map("case_id")
+  caseNumber  String     @unique @map("case_number") @db.VarChar(50)
+  title       String     @db.VarChar(255)
+  description String?    @db.Text
+  createdBy   Int        @map("created_by")
+  status      CaseStatus @default(open)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  creator      User             @relation("CaseCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  assignments  CaseAssignment[]
+  caseSuspects CaseSuspect[]
+
+  @@map("cases")
+}
+
+model CaseAssignment {
+  id         Int      @id @default(autoincrement()) @map("assignment_id")
+  caseId     Int      @map("case_id")
+  userId     Int      @map("user_id")
+  userNotes  String?  @map("user_notes") @db.Text
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
+
+  case       Case        @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  panchnamas Panchnama[]
+
+  @@unique([caseId, userId])
+  @@map("case_assignments")
+}
+
+// ---------- suspects and accounts ----------
+
+model Suspect {
+  id           Int       @id @default(autoincrement()) @map("suspect_id")
+  fullName     String    @map("full_name") @db.VarChar(150)
+  alias        String?   @db.VarChar(150)
+  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  aadharNumber String?   @unique @map("aadhar_number") @db.VarChar(12)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  caseSuspects CaseSuspect[]
+  accounts     SocialAccount[]
+
+  @@map("suspects")
+}
+
+model CaseSuspect {
+  id                 Int         @id @default(autoincrement()) @map("case_suspect_id")
+  caseId             Int         @map("case_id")
+  suspectId          Int         @map("suspect_id")
+  involvement        Involvement
+  involvementDetails String?     @map("involvement_details") @db.Text
+  addedAt            DateTime    @default(now()) @map("added_at") @db.Timestamptz(6)
+
+  case    Case    @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  suspect Suspect @relation(fields: [suspectId], references: [id], onDelete: Restrict)
+
+  @@unique([caseId, suspectId])
+  @@map("case_suspects")
+}
+
+model Platform {
+  id     Int     @id @default(autoincrement()) @map("platform_id")
+  name   String  @unique @map("platform_name") @db.VarChar(30)
+  active Boolean @default(true)
+
+  sections PlatformSection[]
+  accounts SocialAccount[]
+
+  @@map("platforms")
+}
+
+model PlatformSection {
+  id          Int    @id @default(autoincrement()) @map("platform_section_id")
+  platformId  Int    @map("platform_id")
+  sectionName String @map("section_name") @db.VarChar(30)
+
+  platform    Platform     @relation(fields: [platformId], references: [id], onDelete: Restrict)
+  screenshots Screenshot[]
+
+  @@unique([platformId, sectionName])
+  @@map("platform_sections")
+}
+
+model SocialAccount {
+  id                Int     @id @default(autoincrement()) @map("account_id")
+  suspectId         Int     @map("suspect_id")
+  platformId        Int     @map("platform_id")
+  handle            String  @db.VarChar(150)
+  platformAccountId String? @map("platform_account_id") @db.VarChar(100)
+  profileUrl        String? @map("profile_url") @db.Text
+
+  suspect  Suspect          @relation(fields: [suspectId], references: [id], onDelete: Restrict)
+  platform Platform         @relation(fields: [platformId], references: [id], onDelete: Restrict)
+  sessions CaptureSession[]
+
+  @@unique([suspectId, platformId, handle])
+  @@unique([platformId, platformAccountId])
+  @@map("social_accounts")
+}
+
+// ---------- panchnama and capture ----------
+
+model Panchnama {
+  id           Int      @id @default(autoincrement()) @map("panchnama_id")
+  panchnamaNo  String   @unique @map("panchnama_no") @db.VarChar(50)
+  caseId       Int      @map("case_id")
+  examinerId   Int      @map("examiner_id")
+  authorityRef String   @map("authority_ref") @db.VarChar(100)
+  location     String   @db.VarChar(255)
+  heldAt       DateTime @map("held_at") @db.Timestamptz(6)
+
+  // composite foreign key: only a user assigned to the case can conduct its panchnama
+  assignment CaseAssignment   @relation(fields: [caseId, examinerId], references: [caseId, userId], onDelete: Restrict)
+  sessions   CaptureSession[]
+  witnesses  Witness[]
+  reports    Report[]
+
+  @@map("panchnamas")
+}
+
+model CaptureSession {
+  id          Int           @id @default(autoincrement()) @map("session_id")
+  panchnamaId Int           @map("panchnama_id")
+  accountId   Int           @map("account_id")
+  deviceType  DeviceType    @map("device_type")
+  deviceLabel String?       @map("device_label") @db.VarChar(100)
+  toolVersion String        @map("tool_version") @db.VarChar(30)
+  status      SessionStatus @default(open)
+  startedAt   DateTime      @default(now()) @map("started_at") @db.Timestamptz(6)
+  endedAt     DateTime?     @map("ended_at") @db.Timestamptz(6)
+
+  panchnama   Panchnama     @relation(fields: [panchnamaId], references: [id], onDelete: Restrict)
+  account     SocialAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  screenshots Screenshot[]
+
+  @@map("capture_sessions")
+}
+
+model Screenshot {
+  id                Int         @id @default(autoincrement()) @map("screenshot_id")
+  sessionId         Int         @map("session_id")
+  platformSectionId Int         @map("platform_section_id")
+  sequenceNo        Int         @map("sequence_no")
+  filePath          String      @map("file_path") @db.Text
+  sha256Hash        String      @map("sha256_hash") @db.Char(64)
+  parseStatus       ParseStatus @default(pending) @map("parse_status")
+  sourceUrl         String?     @map("source_url") @db.Text
+  metadata          Json?       @db.JsonB
+  capturedAt        DateTime    @default(now()) @map("captured_at") @db.Timestamptz(6)
+
+  session CaptureSession  @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  section PlatformSection @relation(fields: [platformSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, platformSectionId, sequenceNo])
+  @@map("screenshots")
+}
+
+model Witness {
+  id           Int     @id @default(autoincrement()) @map("witness_id")
+  panchnamaId  Int     @map("panchnama_id")
+  fullName     String  @map("full_name") @db.VarChar(150)
+  contactNo    String? @map("contact_no") @db.VarChar(15)
+  aadharNumber String? @map("aadhar_number") @db.VarChar(12)
+
+  panchnama Panchnama @relation(fields: [panchnamaId], references: [id], onDelete: Restrict)
+
+  // the same witness can sign many panchnamas, so uniqueness is per panchnama
+  @@unique([panchnamaId, aadharNumber])
+  @@map("witnesses")
+}
+
+// ---------- reporting and audit ----------
+
+model Report {
+  id          Int       @id @default(autoincrement()) @map("report_id")
+  panchnamaId Int       @map("panchnama_id")
+  versionNo   Int       @default(1) @map("version_no")
+  filePath    String    @map("file_path") @db.Text
+  sha256Hash  String    @map("sha256_hash") @db.Char(64)
+  generatedBy Int       @map("generated_by")
+  approvedBy  Int?      @map("approved_by")
+  approvedAt  DateTime? @map("approved_at") @db.Timestamptz(6)
+  generatedAt DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
+
+  panchnama Panchnama @relation(fields: [panchnamaId], references: [id], onDelete: Restrict)
+  generator User      @relation("ReportGenerator", fields: [generatedBy], references: [id], onDelete: Restrict)
+  approver  User?     @relation("ReportApprover", fields: [approvedBy], references: [id], onDelete: Restrict)
+
+  @@unique([panchnamaId, versionNo])
+  @@map("reports")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement()) @map("log_id")
+  userId     Int?     @map("user_id")
+  action     String   @db.VarChar(50)
+  entityType String?  @map("entity_type") @db.VarChar(30)
+  entityId   Int?     @map("entity_id")
+  detail     String?  @db.Text
+  chainHash  String   @map("chain_hash") @db.Char(64)
+  loggedAt   DateTime @default(now()) @map("logged_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("audit_logs")
+}
