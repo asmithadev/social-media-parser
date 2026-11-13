@@ -23,4 +23,26 @@ async function listUsers(req, res) {
   return res.json({ users });
 }
 
-module.exports = { listUsers };
+async function createUser(req, res) {
+  const input = createUserSchema.safeParse(req.body);
+  if (!input.success) {
+    return res.status(400).json({
+      message: 'Provide an email, full name, examiner or reviewer role, and password of 1 to 72 bytes.',
+    });
+  }
+
+  const { password, ...profile } = input.data;
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  try {
+    const user = await prisma.user.create({ data: { ...profile, passwordHash }, select });
+    return res.status(201).json({ user });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'A user with that email already exists.' });
+    }
+    throw error;
+  }
+}
+
+module.exports = { listUsers, createUser };
