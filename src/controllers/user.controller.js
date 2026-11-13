@@ -45,4 +45,25 @@ async function createUser(req, res) {
   }
 }
 
-module.exports = { listUsers, createUser };
+async function updateUser(req, res) {
+  const id = recordId.safeParse(req.params.userId);
+  const input = updateUserSchema.safeParse(req.body);
+  if (!id.success || !input.success) {
+    return res.status(400).json({ message: 'Provide a valid user ID and a full name or active status.' });
+  }
+  if (id.data === req.user.id && input.data.active === false) {
+    return res.status(409).json({ message: 'You cannot deactivate your own account.' });
+  }
+
+  try {
+    const user = await prisma.user.update({ where: { id: id.data }, data: input.data, select });
+    return res.json({ user });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    throw error;
+  }
+}
+
+module.exports = { listUsers, createUser, updateUser };
