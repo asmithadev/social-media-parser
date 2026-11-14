@@ -22,6 +22,16 @@ async function listAccounts(req, res) {
   return res.json(suspect);
 }
 
+async function getAccount(req, res) {
+  const input = readInput(req, res, ['accountId']);
+  if (!input) return;
+  const account = await prisma.socialAccount.findFirst({
+    where: { id: input.accountId, suspect: suspectScope(req.user) },
+  });
+  if (!account) return res.status(404).json({ message: 'Account not found.' });
+  return res.json({ account });
+}
+
 async function createAccount(req, res) {
   const input = readInput(req, res, ['suspectId'], createSchema);
   if (!input) return;
@@ -34,4 +44,4 @@ async function createAccount(req, res) {
     prisma.socialAccount.create({ data: { suspectId: input.suspectId, ...input.data } }));
 }
 
-module.exports = { listAccounts, createAccount };
+module.exports = { listAccounts, createAccount, getAccount };
