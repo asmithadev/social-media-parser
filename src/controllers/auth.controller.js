@@ -45,4 +45,9 @@ async function login(req, res) {
   return res.status(200).json({ accessToken });
 }
 
-module.exports = { login };
+function me(req, res) {
+  const { id, email, fullName, role } = req.user;
+  return res.json({ user: { id, email, fullName, role } });
+}
+
+module.exports = { login, me };
