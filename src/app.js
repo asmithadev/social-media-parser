@@ -49,5 +49,6 @@ app.use('/api', require('./routes/account.routes'));
 
 app.use('/api', require('./routes/platform.routes'));
 
+app.use('/api', require('./routes/panchnama.routes'));
 
 module.exports = app;
