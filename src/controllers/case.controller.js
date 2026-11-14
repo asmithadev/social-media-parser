@@ -31,6 +31,19 @@ async function createCase(req, res) {
   }
 }
 
+async function getCase(req, res) {
+  const id = recordId.safeParse(req.params.caseId);
+  if (!id.success) {
+    return res.status(400).json({ message: 'Provide a valid case ID.' });
+  }
+
+  const record = await prisma.case.findFirst({ where: { id: id.data, ...caseScope(req.user) } });
+  if (!record) {
+    return res.status(404).json({ message: 'Case not found.' });
+  }
+  return res.json({ case: record });
+}
+
 const updateCaseSchema = createCaseSchema.partial().extend({
   status: z.enum(['open', 'closed']).optional(),
 }).refine(data => Object.keys(data).length > 0);
@@ -40,4 +53,4 @@ const assignmentSchema = z.strictObject({
   userNotes: z.string().trim().nullable().optional(),
 });
 
-module.exports = { listCases, createCase };
+module.exports = { listCases, createCase, getCase };
