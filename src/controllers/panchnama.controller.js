@@ -42,4 +42,14 @@ async function createPanchnama(req, res) {
   }));
 }
 
-module.exports = { listPanchnamas, createPanchnama };
+async function getPanchnama(req, res) {
+  const input = readInput(req, res, ['panchnamaId']);
+  if (!input) return;
+  const panchnama = await prisma.panchnama.findFirst({
+    where: { id: input.panchnamaId, ...panchnamaScope(req.user) },
+  });
+  if (!panchnama) return res.status(404).json({ message: 'Panchnama not found.' });
+  return res.json({ panchnama });
+}
+
+module.exports = { listPanchnamas, createPanchnama, getPanchnama };
