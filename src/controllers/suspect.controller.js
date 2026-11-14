@@ -24,6 +24,17 @@ async function listSuspects(req, res) {
   return res.json({ suspects });
 }
 
+async function getSuspect(req, res) {
+  const input = readInput(req, res, ['suspectId']);
+  if (!input) return;
+  const suspect = await prisma.suspect.findFirst({
+    where: { id: input.suspectId, ...suspectScope(req.user) },
+    select: publicFields,
+  });
+  if (!suspect) return res.status(404).json({ message: 'Suspect not found.' });
+  return res.json({ suspect });
+}
+
 async function createSuspect(req, res) {
   const input = readInput(req, res, [], suspectSchema);
   if (!input) return;
@@ -31,4 +42,4 @@ async function createSuspect(req, res) {
     prisma.suspect.create({ data: input.data, select: publicFields }));
 }
 
-module.exports = { listSuspects, createSuspect };
+module.exports = { listSuspects, getSuspect, createSuspect };

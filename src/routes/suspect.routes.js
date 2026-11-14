@@ -6,5 +6,6 @@ const controller = require('../controllers/suspect.controller');
 const router = express.Router();
 router.get('/suspects', requireAuth, controller.listSuspects);
 router.post('/suspects', requireAuth, requireAdmin, controller.createSuspect);
+router.get('/suspects/:suspectId', requireAuth, controller.getSuspect);
 
 module.exports = router;
