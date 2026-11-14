@@ -24,4 +24,11 @@ async function listSuspects(req, res) {
   return res.json({ suspects });
 }
 
-module.exports = { listSuspects };
+async function createSuspect(req, res) {
+  const input = readInput(req, res, [], suspectSchema);
+  if (!input) return;
+  return writeRecord(res, 201, 'suspect', () =>
+    prisma.suspect.create({ data: input.data, select: publicFields }));
+}
+
+module.exports = { listSuspects, createSuspect };
