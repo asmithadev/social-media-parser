@@ -4,5 +4,6 @@ const controller = require('../controllers/platform.controller');
 
 const router = express.Router();
 router.get('/platforms', requireAuth, controller.listPlatforms);
+router.get('/platforms/:platformId/sections', requireAuth, controller.listSections);
 
 module.exports = router;
