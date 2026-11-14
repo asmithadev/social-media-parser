@@ -7,5 +7,6 @@ router.get('/cases/:caseId/panchnamas', requireAuth, controller.listPanchnamas);
 router.post('/cases/:caseId/panchnamas', requireAuth, controller.createPanchnama);
 router.get('/panchnamas/:panchnamaId', requireAuth, controller.getPanchnama);
 
+router.get('/panchnamas/:panchnamaId/witnesses', requireAuth, controller.listWitnesses);
 
 module.exports = router;
