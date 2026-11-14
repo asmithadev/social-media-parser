@@ -22,4 +22,16 @@ async function listAccounts(req, res) {
   return res.json(suspect);
 }
 
-module.exports = { listAccounts };
+async function createAccount(req, res) {
+  const input = readInput(req, res, ['suspectId'], createSchema);
+  if (!input) return;
+  const platform = await prisma.platform.findFirst({
+    where: { id: input.data.platformId, active: true },
+    select: { id: true },
+  });
+  if (!platform) return res.status(404).json({ message: 'Active platform not found.' });
+  return writeRecord(res, 201, 'account', () =>
+    prisma.socialAccount.create({ data: { suspectId: input.suspectId, ...input.data } }));
+}
+
+module.exports = { listAccounts, createAccount };
