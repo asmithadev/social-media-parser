@@ -30,4 +30,12 @@ async function linkSuspect(req, res) {
     prisma.caseSuspect.create({ data: { caseId: input.caseId, ...input.data } }));
 }
 
-module.exports = { listLinks, linkSuspect };
+async function updateLink(req, res) {
+  const input = readInput(req, res, ['caseId', 'suspectId'], updateSchema);
+  if (!input) return;
+  const { caseId, suspectId, data } = input;
+  return writeRecord(res, 200, 'caseSuspect', () =>
+    prisma.caseSuspect.update({ where: { caseId_suspectId: { caseId, suspectId } }, data }));
+}
+
+module.exports = { listLinks, linkSuspect, updateLink };
