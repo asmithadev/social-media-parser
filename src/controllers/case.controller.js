@@ -48,9 +48,16 @@ const updateCaseSchema = createCaseSchema.partial().extend({
   status: z.enum(['open', 'closed']).optional(),
 }).refine(data => Object.keys(data).length > 0);
 
+async function updateCase(req, res) {
+  const input = readInput(req, res, ['caseId'], updateCaseSchema);
+  if (!input) return;
+  return writeRecord(res, 200, 'case', () =>
+    prisma.case.update({ where: { id: input.caseId }, data: input.data }));
+}
+
 const assignmentSchema = z.strictObject({
   userId: id,
   userNotes: z.string().trim().nullable().optional(),
 });
 
-module.exports = { listCases, createCase, getCase };
+module.exports = { listCases, createCase, getCase, updateCase };
