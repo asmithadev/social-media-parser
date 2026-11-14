@@ -47,6 +47,7 @@ app.use('/api', require('./routes/case-suspect.routes'));
 
 app.use('/api', require('./routes/account.routes'));
 
+app.use('/api', require('./routes/platform.routes'));
 
 
 module.exports = app;
