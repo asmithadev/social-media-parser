@@ -71,4 +71,16 @@ async function listAssignments(req, res) {
   return res.json(record);
 }
 
-module.exports = { listCases, createCase, getCase, updateCase, listAssignments };
+async function createAssignment(req, res) {
+  const input = readInput(req, res, ['caseId'], assignmentSchema);
+  if (!input) return;
+  const user = await prisma.user.findFirst({
+    where: { id: input.data.userId, active: true, role: { in: ['examiner', 'reviewer'] } },
+    select: { id: true },
+  });
+  if (!user) return res.status(404).json({ message: 'Active examiner or reviewer not found.' });
+  return writeRecord(res, 201, 'assignment', () =>
+    prisma.caseAssignment.create({ data: { caseId: input.caseId, ...input.data } }));
+}
+
+module.exports = { listCases, createCase, getCase, updateCase, listAssignments, createAssignment };
