@@ -14,6 +14,23 @@ async function listCases(req, res) {
   return res.json({ cases });
 }
 
+async function createCase(req, res) {
+  const input = createCaseSchema.safeParse(req.body);
+  if (!input.success) {
+    return res.status(400).json({ message: 'Provide a valid case number and title.' });
+  }
+
+  try {
+    const record = await prisma.case.create({ data: { ...input.data, createdBy: req.user.id } });
+    return res.status(201).json({ case: record });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'That case number already exists.' });
+    }
+    throw error;
+  }
+}
+
 const updateCaseSchema = createCaseSchema.partial().extend({
   status: z.enum(['open', 'closed']).optional(),
 }).refine(data => Object.keys(data).length > 0);
@@ -23,4 +40,4 @@ const assignmentSchema = z.strictObject({
   userNotes: z.string().trim().nullable().optional(),
 });
 
-module.exports = { listCases };
+module.exports = { listCases, createCase };
