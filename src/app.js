@@ -43,6 +43,7 @@ app.use('/api/cases', require('./routes/case.routes'));
 
 app.use('/api', require('./routes/suspect.routes'));
 
+app.use('/api', require('./routes/case-suspect.routes'));
 
 
 
