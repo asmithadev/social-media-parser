@@ -60,4 +60,15 @@ const assignmentSchema = z.strictObject({
   userNotes: z.string().trim().nullable().optional(),
 });
 
-module.exports = { listCases, createCase, getCase, updateCase };
+async function listAssignments(req, res) {
+  const input = readInput(req, res, ['caseId']);
+  if (!input) return;
+  const record = await prisma.case.findFirst({
+    where: { id: input.caseId, ...caseScope(req.user) },
+    select: { assignments: { orderBy: { id: 'asc' } } },
+  });
+  if (!record) return res.status(404).json({ message: 'Case not found.' });
+  return res.json(record);
+}
+
+module.exports = { listCases, createCase, getCase, updateCase, listAssignments };
