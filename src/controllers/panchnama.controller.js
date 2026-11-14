@@ -26,4 +26,20 @@ async function listPanchnamas(req, res) {
   return res.json({ panchnamas: panchnamas.sort((first, second) => first.id - second.id) });
 }
 
-module.exports = { listPanchnamas };
+async function createPanchnama(req, res) {
+  if (req.user.role !== 'examiner') {
+    return res.status(403).json({ message: 'Examiner access is required.' });
+  }
+  const input = readInput(req, res, ['caseId'], createSchema);
+  if (!input) return;
+  const assignment = await prisma.caseAssignment.findUnique({
+    where: { caseId_userId: { caseId: input.caseId, userId: req.user.id } },
+    select: { id: true },
+  });
+  if (!assignment) return res.status(404).json({ message: 'Assigned case not found.' });
+  return writeRecord(res, 201, 'panchnama', () => prisma.panchnama.create({
+    data: { caseId: input.caseId, examinerId: req.user.id, ...input.data },
+  }));
+}
+
+module.exports = { listPanchnamas, createPanchnama };
