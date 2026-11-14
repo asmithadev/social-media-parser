@@ -44,4 +44,11 @@ async function createAccount(req, res) {
     prisma.socialAccount.create({ data: { suspectId: input.suspectId, ...input.data } }));
 }
 
-module.exports = { listAccounts, createAccount, getAccount };
+async function updateAccount(req, res) {
+  const input = readInput(req, res, ['accountId'], updateSchema);
+  if (!input) return;
+  return writeRecord(res, 200, 'account', () =>
+    prisma.socialAccount.update({ where: { id: input.accountId }, data: input.data }));
+}
+
+module.exports = { listAccounts, createAccount, getAccount, updateAccount };
