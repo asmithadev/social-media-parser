@@ -23,4 +23,11 @@ async function listLinks(req, res) {
   return res.json({ suspects: record.caseSuspects });
 }
 
-module.exports = { listLinks };
+async function linkSuspect(req, res) {
+  const input = readInput(req, res, ['caseId'], linkSchema);
+  if (!input) return;
+  return writeRecord(res, 201, 'caseSuspect', () =>
+    prisma.caseSuspect.create({ data: { caseId: input.caseId, ...input.data } }));
+}
+
+module.exports = { listLinks, linkSuspect };
