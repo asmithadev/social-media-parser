@@ -42,4 +42,11 @@ async function createSuspect(req, res) {
     prisma.suspect.create({ data: input.data, select: publicFields }));
 }
 
-module.exports = { listSuspects, getSuspect, createSuspect };
+async function updateSuspect(req, res) {
+  const input = readInput(req, res, ['suspectId'], updateSchema);
+  if (!input) return;
+  return writeRecord(res, 200, 'suspect', () =>
+    prisma.suspect.update({ where: { id: input.suspectId }, data: input.data, select: publicFields }));
+}
+
+module.exports = { listSuspects, getSuspect, createSuspect, updateSuspect };
