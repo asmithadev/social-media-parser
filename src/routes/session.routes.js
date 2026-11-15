@@ -28,4 +28,6 @@ router.get('/screenshots/:screenshotId/file', requireAuth, controller.downloadSc
 
 router.get('/screenshots/:screenshotId/parsed-artifact', requireAuth, controller.getParsedArtifact);
 
+router.get('/cases/:caseId/parsed-artifacts', requireAuth, controller.searchParsedArtifacts);
+
 module.exports = router;

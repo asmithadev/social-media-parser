@@ -328,3 +328,52 @@ async function getParsedArtifact(req, res) {
 }
 
 exports.getParsedArtifact = getParsedArtifact;
+
+const artifactQuery = z.strictObject({
+  q: z.string().trim().min(1).max(150),
+  after: recordId.optional(),
+});
+
+async function searchParsedArtifacts(req, res) {
+  const input = readInput(req, res, ['caseId']);
+  if (!input) return;
+  const query = artifactQuery.safeParse(req.query);
+  if (!query.success) return res.status(400).json({ message: 'Provide a valid search query and optional cursor.' });
+
+  const { caseId } = input;
+  const record = await prisma.case.findFirst({
+    where: { id: caseId, ...caseScope(req.user) },
+    select: { id: true },
+  });
+  if (!record) return res.status(404).json({ message: 'Case not found.' });
+
+  const text = query.data.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const artifacts = [];
+  let cursor = query.data.after ?? 0;
+  // Walk authorized screenshot IDs in bounded batches before querying MongoDB.
+  while (artifacts.length < 51) {
+    const screenshots = await prisma.screenshot.findMany({
+      where: {
+        id: { gt: cursor },
+        session: { panchnama: { caseId, assignment: { case: caseScope(req.user) } } },
+      },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+      take: 250,
+    });
+    if (!screenshots.length) break;
+    const matches = await ParsedArtifact.find({
+      screenshot_id: { $in: screenshots.map(screenshot => screenshot.id) },
+      text: { $regex: text, $options: 'i' },
+    }).select('screenshot_id text -_id').sort({ screenshot_id: 1 }).limit(51 - artifacts.length).lean();
+    artifacts.push(...matches);
+    cursor = screenshots.at(-1).id;
+    if (screenshots.length < 250) break;
+  }
+  return res.json({
+    artifacts: artifacts.slice(0, 50),
+    nextCursor: artifacts.length > 50 ? artifacts[49].screenshot_id : null,
+  });
+}
+
+exports.searchParsedArtifacts = searchParsedArtifacts;
