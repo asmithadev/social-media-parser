@@ -1,4 +1,8 @@
+const { createHash, randomUUID } = require('node:crypto');
+const { mkdir, writeFile } = require('node:fs/promises');
+const path = require('node:path');
 const { z } = require('zod');
+const recordId = require('../utils/record-id');
 const prisma = require('../config/db-config');
 const { caseScope, readInput, id, writeRecord } = require('../utils/records');
 
@@ -197,3 +201,76 @@ async function getScreenshot(req, res) {
 }
 
 exports.getScreenshot = getScreenshot;
+
+const uploadQuery = z.strictObject({
+  sectionId: recordId,
+  sequenceNo: recordId,
+  sourceUrl: z.url({ protocol: /^https?$/ }).optional(),
+});
+const pngSignature = Buffer.from('89504e470d0a1a0a', 'hex');
+
+async function uploadScreenshot(req, res) {
+  if (req.user.role !== 'examiner') {
+    return res.status(403).json({ message: 'Examiner access is required.' });
+  }
+  const input = readInput(req, res, ['sessionId']);
+  if (!input) return;
+  const query = uploadQuery.safeParse(req.query);
+  if (!query.success) {
+    return res.status(400).json({ message: 'Provide a valid sectionId and sequenceNo.' });
+  }
+  if (!req.is('image/png')) {
+    return res.status(415).json({ message: 'Send the screenshot as image/png.' });
+  }
+  const bytes = req.body;
+  if (!Buffer.isBuffer(bytes) || bytes.length < 33 || !bytes.subarray(0, 8).equals(pngSignature) ||
+      bytes.readUInt32BE(8) !== 13 || bytes.toString('ascii', 12, 16) !== 'IHDR') {
+    return res.status(400).json({ message: 'The request body does not start with a PNG header.' });
+  }
+
+  const { sessionId } = input;
+  const { sectionId, sequenceNo, sourceUrl } = query.data;
+  const sha256Hash = createHash('sha256').update(bytes).digest('hex');
+  const filePath = path.join('screenshots', randomUUID() + '.png');
+  const absolutePath = path.resolve(process.env.EVIDENCE_DIR || 'evidence', filePath);
+
+  let result;
+  try {
+    result = await prisma.$transaction(async tx => {
+      // Use the same session lock as section updates and session completion.
+      await tx.$queryRaw`SELECT s.session_id FROM capture_sessions s
+        JOIN panchnamas p ON p.panchnama_id = s.panchnama_id
+        WHERE s.session_id = ${sessionId} AND p.examiner_id = ${req.user.id}
+        FOR UPDATE OF s`;
+      const session = await tx.captureSession.findFirst({
+        where: { id: sessionId, panchnama: { examinerId: req.user.id } },
+        select: { status: true, account: { select: { platformId: true } } },
+      });
+      if (!session) return { status: 404, message: 'Session not found.' };
+      if (session.status !== 'open') return { status: 409, message: 'Session has already ended.' };
+      const section = await tx.platformSection.findFirst({
+        where: { id: sectionId, platformId: session.account.platformId },
+        select: { id: true },
+      });
+      if (!section) return { status: 404, message: 'Section not found for this platform.' };
+
+      // Create the row first so a duplicate sequence never writes a file.
+      const screenshot = await tx.screenshot.create({
+        data: { sessionId, platformSectionId: sectionId, sequenceNo, sourceUrl, sha256Hash, filePath },
+        omit: { filePath: true },
+      });
+      await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });
+      await writeFile(absolutePath, bytes, { flag: 'wx', mode: 0o600, flush: true });
+      return { screenshot };
+    });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'This screenshot sequence number is already in use.' });
+    }
+    throw error;
+  }
+  if (!result.screenshot) return res.status(result.status).json({ message: result.message });
+  return res.status(201).json(result);
+}
+
+exports.uploadScreenshot = uploadScreenshot;

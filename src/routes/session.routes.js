@@ -18,6 +18,10 @@ router.patch('/sessions/:sessionId/sections/:sectionId', requireAuth, controller
 
 router.get('/sessions/:sessionId/screenshots', requireAuth, controller.listScreenshots);
 
+router.post('/sessions/:sessionId/screenshots',
+  requireAuth, express.raw({ type: 'image/png', limit: '10mb', inflate: false }),
+  controller.uploadScreenshot);
+
 router.get('/screenshots/:screenshotId', requireAuth, controller.getScreenshot);
 
 module.exports = router;
