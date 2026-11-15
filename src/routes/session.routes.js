@@ -6,4 +6,6 @@ const router = express.Router();
 
 router.get('/panchnamas/:panchnamaId/sessions', requireAuth, controller.listSessions);
 
+router.post('/panchnamas/:panchnamaId/sessions', requireAuth, controller.createSession);
+
 module.exports = router;
