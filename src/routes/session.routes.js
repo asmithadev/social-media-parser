@@ -26,4 +26,6 @@ router.get('/screenshots/:screenshotId', requireAuth, controller.getScreenshot);
 
 router.get('/screenshots/:screenshotId/file', requireAuth, controller.downloadScreenshot);
 
+router.get('/screenshots/:screenshotId/parsed-artifact', requireAuth, controller.getParsedArtifact);
+
 module.exports = router;

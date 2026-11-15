@@ -2,6 +2,7 @@ const { createHash, randomUUID } = require('node:crypto');
 const { mkdir, readFile, realpath, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const { z } = require('zod');
+const ParsedArtifact = require('../models/parsed-artifact');
 const recordId = require('../utils/record-id');
 const prisma = require('../config/db-config');
 const { caseScope, readInput, id, writeRecord } = require('../utils/records');
@@ -309,3 +310,21 @@ async function downloadScreenshot(req, res) {
 }
 
 exports.downloadScreenshot = downloadScreenshot;
+
+async function getParsedArtifact(req, res) {
+  const input = readInput(req, res, ['screenshotId']);
+  if (!input) return;
+  const screenshot = await prisma.screenshot.findFirst({
+    where: { id: input.screenshotId, session: sessionScope(req.user) },
+    select: { id: true, parseStatus: true },
+  });
+  if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
+
+  const artifact = await ParsedArtifact.findOne({ screenshot_id: screenshot.id }).select('-_id').lean();
+  if (!artifact) {
+    return res.status(404).json({ message: 'Parsed artifact not found.', parseStatus: screenshot.parseStatus });
+  }
+  return res.json({ artifact });
+}
+
+exports.getParsedArtifact = getParsedArtifact;
