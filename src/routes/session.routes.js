@@ -18,4 +18,6 @@ router.patch('/sessions/:sessionId/sections/:sectionId', requireAuth, controller
 
 router.get('/sessions/:sessionId/screenshots', requireAuth, controller.listScreenshots);
 
+router.get('/screenshots/:screenshotId', requireAuth, controller.getScreenshot);
+
 module.exports = router;

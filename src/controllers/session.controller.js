@@ -184,3 +184,16 @@ async function listScreenshots(req, res) {
 
 
 exports.listScreenshots = listScreenshots;
+
+async function getScreenshot(req, res) {
+  const input = readInput(req, res, ['screenshotId']);
+  if (!input) return;
+  const screenshot = await prisma.screenshot.findFirst({
+    where: { id: input.screenshotId, session: sessionScope(req.user) },
+    omit: { filePath: true },
+  });
+  if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
+  return res.json({ screenshot });
+}
+
+exports.getScreenshot = getScreenshot;
