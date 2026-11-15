@@ -9,4 +9,6 @@ router.get('/panchnamas/:panchnamaId', requireAuth, controller.getPanchnama);
 
 router.get('/panchnamas/:panchnamaId/witnesses', requireAuth, controller.listWitnesses);
 
+router.post('/panchnamas/:panchnamaId/witnesses', requireAuth, controller.createWitness);
+
 module.exports = router;

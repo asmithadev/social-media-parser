@@ -63,4 +63,27 @@ async function listWitnesses(req, res) {
   return res.json(panchnama);
 }
 
-module.exports = { listPanchnamas, createPanchnama, getPanchnama, listWitnesses };
+const witnessSchema = z.strictObject({
+  fullName: z.string().trim().min(1).max(150),
+  contactNo: z.string().trim().min(1).max(15).nullable().optional(),
+  aadharNumber: z.string().regex(/^[0-9]{12}$/).nullable().optional(),
+});
+
+async function createWitness(req, res) {
+  if (req.user.role !== 'examiner') {
+    return res.status(403).json({ message: 'Examiner access is required.' });
+  }
+  const input = readInput(req, res, ['panchnamaId'], witnessSchema);
+  if (!input) return;
+  const panchnama = await prisma.panchnama.findFirst({
+    where: { id: input.panchnamaId, examinerId: req.user.id },
+    select: { id: true },
+  });
+  if (!panchnama) return res.status(404).json({ message: 'Panchnama not found.' });
+  return writeRecord(res, 201, 'witness', () => prisma.witness.create({
+    data: { panchnamaId: panchnama.id, ...input.data },
+    select: { id: true, fullName: true },
+  }));
+}
+
+module.exports = { listPanchnamas, createPanchnama, getPanchnama, listWitnesses, createWitness };
