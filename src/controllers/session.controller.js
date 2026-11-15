@@ -117,3 +117,51 @@ async function listSections(req, res) {
 
 
 exports.listSections = listSections;
+
+const outcomeSchema = z.strictObject({
+  status: z.enum(['captured', 'failed', 'skipped']),
+  reason: z.string().trim().min(1).max(1000).nullable().optional(),
+}).refine(data => data.status === 'captured' || Boolean(data.reason), {
+  path: ['reason'],
+  message: 'Provide a reason for a failed or skipped section.',
+});
+
+async function setSectionOutcome(req, res) {
+  if (req.user.role !== 'examiner') {
+    return res.status(403).json({ message: 'Examiner access is required.' });
+  }
+  const input = readInput(req, res, ['sessionId', 'sectionId'], outcomeSchema);
+  if (!input) return;
+  const { sessionId, sectionId, data } = input;
+  const result = await prisma.$transaction(async tx => {
+    // Serialize outcome updates against the session's final status update.
+    await tx.$queryRaw`SELECT s.session_id FROM capture_sessions s
+      JOIN panchnamas p ON p.panchnama_id = s.panchnama_id
+      WHERE s.session_id = ${sessionId} AND p.examiner_id = ${req.user.id}
+      FOR UPDATE OF s`;
+    const session = await tx.captureSession.findFirst({
+      where: { id: sessionId, panchnama: { examinerId: req.user.id } },
+      select: { status: true, account: { select: { platformId: true } } },
+    });
+    if (!session) return { status: 404, message: 'Session not found.' };
+    if (session.status !== 'open') return { status: 409, message: 'Session has already ended.' };
+    const section = await tx.platformSection.findFirst({
+      where: { id: sectionId, platformId: session.account.platformId },
+      select: { id: true },
+    });
+    if (!section) return { status: 404, message: 'Section not found for this platform.' };
+
+    const key = { sessionId, platformSectionId: sectionId };
+    const outcome = { status: data.status, reason: data.reason ?? null };
+    return { outcome: await tx.captureSectionOutcome.upsert({
+      where: { sessionId_platformSectionId: key },
+      create: { ...key, ...outcome },
+      update: outcome,
+    }) };
+  });
+  if (!result.outcome) return res.status(result.status).json({ message: result.message });
+  return res.json(result);
+}
+
+
+exports.setSectionOutcome = setSectionOutcome;
