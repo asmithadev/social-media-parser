@@ -165,3 +165,22 @@ async function setSectionOutcome(req, res) {
 
 
 exports.setSectionOutcome = setSectionOutcome;
+
+async function listScreenshots(req, res) {
+  const input = readInput(req, res, ['sessionId']);
+  if (!input) return;
+  const session = await prisma.captureSession.findFirst({
+    where: { id: input.sessionId, ...sessionScope(req.user) },
+    select: {
+      screenshots: {
+        orderBy: [{ platformSectionId: 'asc' }, { sequenceNo: 'asc' }],
+        omit: { filePath: true },
+      },
+    },
+  });
+  if (!session) return res.status(404).json({ message: 'Session not found.' });
+  return res.json(session);
+}
+
+
+exports.listScreenshots = listScreenshots;

@@ -16,4 +16,6 @@ router.get('/sessions/:sessionId/sections', requireAuth, controller.listSections
 
 router.patch('/sessions/:sessionId/sections/:sectionId', requireAuth, controller.setSectionOutcome);
 
+router.get('/sessions/:sessionId/screenshots', requireAuth, controller.listScreenshots);
+
 module.exports = router;
