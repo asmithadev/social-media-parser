@@ -12,4 +12,6 @@ router.get('/sessions/:sessionId', requireAuth, controller.getSession);
 
 router.patch('/sessions/:sessionId', requireAuth, controller.finishSession);
 
+router.get('/sessions/:sessionId/sections', requireAuth, controller.listSections);
+
 module.exports = router;

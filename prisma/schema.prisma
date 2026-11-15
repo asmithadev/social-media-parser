@@ -159,6 +159,7 @@ model PlatformSection {
 
   platform    Platform     @relation(fields: [platformId], references: [id], onDelete: Restrict)
   screenshots Screenshot[]
+  outcomes    CaptureSectionOutcome[]
 
   @@unique([platformId, sectionName])
   @@map("platform_sections")
@@ -215,8 +216,30 @@ model CaptureSession {
   panchnama   Panchnama     @relation(fields: [panchnamaId], references: [id], onDelete: Restrict)
   account     SocialAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
   screenshots Screenshot[]
+  outcomes    CaptureSectionOutcome[]
 
   @@map("capture_sessions")
+}
+
+enum CaptureSectionStatus {
+  captured
+  failed
+  skipped
+
+  @@map("capture_section_status")
+}
+
+model CaptureSectionOutcome {
+  sessionId         Int                  @map("session_id")
+  platformSectionId Int                  @map("platform_section_id")
+  status            CaptureSectionStatus
+  reason            String?              @db.Text
+
+  session CaptureSession  @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  section PlatformSection @relation(fields: [platformSectionId], references: [id], onDelete: Restrict)
+
+  @@id([sessionId, platformSectionId])
+  @@map("capture_section_outcomes")
 }
 
 model Screenshot {

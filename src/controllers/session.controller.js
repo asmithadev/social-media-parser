@@ -95,3 +95,25 @@ async function finishSession(req, res) {
 
 
 exports.finishSession = finishSession;
+
+async function listSections(req, res) {
+  const input = readInput(req, res, ['sessionId']);
+  if (!input) return;
+  const session = await prisma.captureSession.findFirst({
+    where: { id: input.sessionId, ...sessionScope(req.user) },
+    select: {
+      account: { select: { platform: { select: { sections: { orderBy: { id: 'asc' } } } } } },
+      outcomes: true,
+    },
+  });
+  if (!session) return res.status(404).json({ message: 'Session not found.' });
+  const outcomes = new Map(session.outcomes.map(outcome => [outcome.platformSectionId, outcome]));
+  const sections = session.account.platform.sections.map(section => {
+    const outcome = outcomes.get(section.id);
+    return { ...section, status: outcome?.status ?? 'pending', reason: outcome?.reason ?? null };
+  });
+  return res.json({ sections });
+}
+
+
+exports.listSections = listSections;
