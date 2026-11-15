@@ -1,5 +1,5 @@
 const { createHash, randomUUID } = require('node:crypto');
-const { mkdir, writeFile } = require('node:fs/promises');
+const { mkdir, readFile, realpath, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const { z } = require('zod');
 const recordId = require('../utils/record-id');
@@ -274,3 +274,38 @@ async function uploadScreenshot(req, res) {
 }
 
 exports.uploadScreenshot = uploadScreenshot;
+
+async function downloadScreenshot(req, res) {
+  const input = readInput(req, res, ['screenshotId']);
+  if (!input) return;
+  const screenshot = await prisma.screenshot.findFirst({
+    where: { id: input.screenshotId, session: sessionScope(req.user) },
+    select: { filePath: true, sha256Hash: true },
+  });
+  if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
+
+  let bytes;
+  try {
+    const root = await realpath(process.env.EVIDENCE_DIR || 'evidence');
+    const target = await realpath(path.resolve(root, screenshot.filePath));
+    const relative = path.relative(root, target);
+    if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
+      return res.status(404).json({ message: 'Screenshot file not found.' });
+    }
+    bytes = await readFile(target);
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+      return res.status(404).json({ message: 'Screenshot file not found.' });
+    }
+    throw error;
+  }
+
+  const hash = createHash('sha256').update(bytes).digest('hex');
+  if (hash !== screenshot.sha256Hash) {
+    return res.status(409).json({ message: 'Screenshot file failed its integrity check.' });
+  }
+  res.set({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+  return res.attachment('screenshot-' + input.screenshotId + '.png').send(bytes);
+}
+
+exports.downloadScreenshot = downloadScreenshot;

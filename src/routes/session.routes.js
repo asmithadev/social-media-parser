@@ -24,4 +24,6 @@ router.post('/sessions/:sessionId/screenshots',
 
 router.get('/screenshots/:screenshotId', requireAuth, controller.getScreenshot);
 
+router.get('/screenshots/:screenshotId/file', requireAuth, controller.downloadScreenshot);
+
 module.exports = router;
