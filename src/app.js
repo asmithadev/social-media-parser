@@ -53,4 +53,6 @@ app.use('/api', require('./routes/panchnama.routes'));
 
 app.use('/api', require('./routes/session.routes'));
 
+app.use('/api', require('./routes/report.routes'));
+
 module.exports = app;
