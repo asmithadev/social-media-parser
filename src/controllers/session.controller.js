@@ -50,3 +50,20 @@ async function createSession(req, res) {
 
 
 exports.createSession = createSession;
+
+function sessionScope(user) {
+  return { panchnama: { assignment: { case: caseScope(user) } } };
+}
+
+async function getSession(req, res) {
+  const input = readInput(req, res, ['sessionId']);
+  if (!input) return;
+  const session = await prisma.captureSession.findFirst({
+    where: { id: input.sessionId, ...sessionScope(req.user) },
+  });
+  if (!session) return res.status(404).json({ message: 'Session not found.' });
+  return res.json({ session });
+}
+
+
+exports.getSession = getSession;

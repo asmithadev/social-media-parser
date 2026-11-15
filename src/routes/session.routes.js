@@ -8,4 +8,6 @@ router.get('/panchnamas/:panchnamaId/sessions', requireAuth, controller.listSess
 
 router.post('/panchnamas/:panchnamaId/sessions', requireAuth, controller.createSession);
 
+router.get('/sessions/:sessionId', requireAuth, controller.getSession);
+
 module.exports = router;
