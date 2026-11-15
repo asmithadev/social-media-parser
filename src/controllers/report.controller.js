@@ -19,3 +19,16 @@ async function listReports(req, res) {
 }
 
 exports.listReports = listReports;
+
+async function getReport(req, res) {
+  const input = readInput(req, res, ['reportId']);
+  if (!input) return;
+  const report = await prisma.report.findFirst({
+    where: { id: input.reportId, panchnama: panchnamaScope(req.user) },
+    omit: { filePath: true },
+  });
+  if (!report) return res.status(404).json({ message: 'Report not found.' });
+  return res.json({ report });
+}
+
+exports.getReport = getReport;
