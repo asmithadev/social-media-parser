@@ -67,3 +67,31 @@ async function getSession(req, res) {
 
 
 exports.getSession = getSession;
+
+const finishSchema = z.strictObject({ status: z.enum(['completed', 'failed']) });
+
+async function finishSession(req, res) {
+  if (req.user.role !== 'examiner') {
+    return res.status(403).json({ message: 'Examiner access is required.' });
+  }
+  const input = readInput(req, res, ['sessionId'], finishSchema);
+  if (!input) return;
+  const where = { id: input.sessionId, panchnama: { examinerId: req.user.id } };
+  const session = await prisma.captureSession.findFirst({ where });
+  if (!session) return res.status(404).json({ message: 'Session not found.' });
+  if (session.status === input.data.status) return res.json({ session });
+
+  const [updated] = await prisma.captureSession.updateManyAndReturn({
+    where: { ...where, status: 'open' },
+    data: { status: input.data.status, endedAt: new Date(Math.max(Date.now(), session.startedAt.getTime())) },
+  });
+  if (updated) return res.json({ session: updated });
+
+  const current = await prisma.captureSession.findFirst({ where });
+  if (!current) return res.status(404).json({ message: 'Session not found.' });
+  if (current.status === input.data.status) return res.json({ session: current });
+  return res.status(409).json({ message: 'Session has already ended.' });
+}
+
+
+exports.finishSession = finishSession;

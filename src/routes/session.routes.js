@@ -10,4 +10,6 @@ router.post('/panchnamas/:panchnamaId/sessions', requireAuth, controller.createS
 
 router.get('/sessions/:sessionId', requireAuth, controller.getSession);
 
+router.patch('/sessions/:sessionId', requireAuth, controller.finishSession);
+
 module.exports = router;
