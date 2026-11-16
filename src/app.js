@@ -55,4 +55,6 @@ app.use('/api', require('./routes/session.routes'));
 
 app.use('/api', require('./routes/report.routes'));
 
+app.use('/api', require('./routes/audit.routes'));
+
 module.exports = app;
