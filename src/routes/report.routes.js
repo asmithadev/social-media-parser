@@ -13,4 +13,6 @@ router.get('/reports/:reportId/file', requireAuth, controller.downloadReport);
 
 router.post('/reports/:reportId/approve', requireAuth, controller.approveReport);
 
+router.post('/reports/:reportId/print-requests', requireAuth, controller.requestPrint);
+
 module.exports = router;

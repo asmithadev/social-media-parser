@@ -142,3 +142,20 @@ async function approveReport(req, res) {
 }
 
 exports.approveReport = approveReport;
+
+async function requestPrint(req, res) {
+  const input = readInput(req, res, ['reportId']);
+  if (!input) return;
+  const event = await prisma.$transaction(async tx => {
+    const report = await tx.report.findFirst({
+      where: { id: input.reportId, panchnama: panchnamaScope(req.user) },
+      select: { id: true },
+    });
+    if (!report) return null;
+    return recordReportEvent(tx, req.user.id, 'REPORT_PRINT_REQUESTED', report.id);
+  });
+  if (!event) return res.status(404).json({ message: 'Report not found.' });
+  return res.status(201).json({ auditLogId: String(event.id) });
+}
+
+exports.requestPrint = requestPrint;
