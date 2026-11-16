@@ -2,6 +2,7 @@ const { z } = require('zod');
 const prisma = require('../config/db-config');
 const recordId = require('../utils/record-id');
 const { caseScope, id, readInput, writeRecord } = require('../utils/records');
+const { withAuditActor } = require('../services/audit');
 
 const createCaseSchema = z.strictObject({
   caseNumber: z.string().trim().min(1).max(50),
@@ -21,7 +22,8 @@ async function createCase(req, res) {
   }
 
   try {
-    const record = await prisma.case.create({ data: { ...input.data, createdBy: req.user.id } });
+    const record = await withAuditActor(req.user.id, tx =>
+      tx.case.create({ data: { ...input.data, createdBy: req.user.id } }));
     return res.status(201).json({ case: record });
   } catch (error) {
     if (error.code === 'P2002') {
@@ -51,8 +53,8 @@ const updateCaseSchema = createCaseSchema.partial().extend({
 async function updateCase(req, res) {
   const input = readInput(req, res, ['caseId'], updateCaseSchema);
   if (!input) return;
-  return writeRecord(res, 200, 'case', () =>
-    prisma.case.update({ where: { id: input.caseId }, data: input.data }));
+  return writeRecord(res, 200, 'case', req.user.id, tx =>
+    tx.case.update({ where: { id: input.caseId }, data: input.data }));
 }
 
 const assignmentSchema = z.strictObject({
@@ -79,8 +81,8 @@ async function createAssignment(req, res) {
     select: { id: true },
   });
   if (!user) return res.status(404).json({ message: 'Active examiner or reviewer not found.' });
-  return writeRecord(res, 201, 'assignment', () =>
-    prisma.caseAssignment.create({ data: { caseId: input.caseId, ...input.data } }));
+  return writeRecord(res, 201, 'assignment', req.user.id, tx =>
+    tx.caseAssignment.create({ data: { caseId: input.caseId, ...input.data } }));
 }
 
 module.exports = { listCases, createCase, getCase, updateCase, listAssignments, createAssignment };

@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const recordId = require('./record-id');
+const { withAuditActor } = require('../services/audit');
 
 const id = z.number().int().min(1).max(2147483647);
 
@@ -32,9 +33,9 @@ function readInput(req, res, params, schema) {
   return values;
 }
 
-async function writeRecord(res, status, key, query) {
+async function writeRecord(res, status, key, userId, query) {
   try {
-    return res.status(status).json({ [key]: await query() });
+    return res.status(status).json({ [key]: await withAuditActor(userId, query) });
   } catch (error) {
     if (error.code === 'P2002') return res.status(409).json({ message: 'A record with those values already exists.' });
     if (error.code === 'P2025' || error.code === 'P2003') {

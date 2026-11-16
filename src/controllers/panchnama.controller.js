@@ -37,7 +37,7 @@ async function createPanchnama(req, res) {
     select: { id: true },
   });
   if (!assignment) return res.status(404).json({ message: 'Assigned case not found.' });
-  return writeRecord(res, 201, 'panchnama', () => prisma.panchnama.create({
+  return writeRecord(res, 201, 'panchnama', req.user.id, tx => tx.panchnama.create({
     data: { caseId: input.caseId, examinerId: req.user.id, ...input.data },
   }));
 }
@@ -80,7 +80,7 @@ async function createWitness(req, res) {
     select: { id: true },
   });
   if (!panchnama) return res.status(404).json({ message: 'Panchnama not found.' });
-  return writeRecord(res, 201, 'witness', () => prisma.witness.create({
+  return writeRecord(res, 201, 'witness', req.user.id, tx => tx.witness.create({
     data: { panchnamaId: panchnama.id, ...input.data },
     select: { id: true, fullName: true },
   }));

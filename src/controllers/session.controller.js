@@ -1,6 +1,7 @@
 const { z } = require('zod');
 const prisma = require('../config/db-config');
 const { caseScope, readInput, id, writeRecord } = require('../utils/records');
+const { withAuditActor } = require('../services/audit');
 
 async function listSessions(req, res) {
   const input = readInput(req, res, ['panchnamaId']);
@@ -43,7 +44,7 @@ async function createSession(req, res) {
     select: { id: true },
   });
   if (!account) return res.status(404).json({ message: 'Account not found in this case.' });
-  return writeRecord(res, 201, 'session', () => prisma.captureSession.create({
+  return writeRecord(res, 201, 'session', req.user.id, tx => tx.captureSession.create({
     data: { panchnamaId: panchnama.id, ...input.data },
   }));
 }
@@ -81,10 +82,10 @@ async function finishSession(req, res) {
   if (!session) return res.status(404).json({ message: 'Session not found.' });
   if (session.status === input.data.status) return res.json({ session });
 
-  const [updated] = await prisma.captureSession.updateManyAndReturn({
+  const [updated] = await withAuditActor(req.user.id, tx => tx.captureSession.updateManyAndReturn({
     where: { ...where, status: 'open' },
     data: { status: input.data.status, endedAt: new Date(Math.max(Date.now(), session.startedAt.getTime())) },
-  });
+  }));
   if (updated) return res.json({ session: updated });
 
   const current = await prisma.captureSession.findFirst({ where });
@@ -133,7 +134,7 @@ async function setSectionOutcome(req, res) {
   const input = readInput(req, res, ['sessionId', 'sectionId'], outcomeSchema);
   if (!input) return;
   const { sessionId, sectionId, data } = input;
-  const result = await prisma.$transaction(async tx => {
+  const result = await withAuditActor(req.user.id, async tx => {
     // Serialize outcome updates against the session's final status update.
     await tx.$queryRaw`SELECT s.session_id FROM capture_sessions s
       JOIN panchnamas p ON p.panchnama_id = s.panchnama_id
