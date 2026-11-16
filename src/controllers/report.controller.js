@@ -2,6 +2,7 @@ const { createHash, randomUUID } = require('node:crypto');
 const { mkdir, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const renderReport = require('../utils/report-pdf');
+const readEvidence = require('../utils/evidence-file');
 const recordReportEvent = require('../utils/audit');
 const prisma = require('../config/db-config');
 const { caseScope, readInput } = require('../utils/records');
@@ -92,3 +93,19 @@ async function generateReport(req, res) {
 }
 
 exports.generateReport = generateReport;
+
+async function downloadReport(req, res) {
+  const input = readInput(req, res, ['reportId']);
+  if (!input) return;
+  const report = await prisma.report.findFirst({
+    where: { id: input.reportId, panchnama: panchnamaScope(req.user) },
+    select: { filePath: true, sha256Hash: true },
+  });
+  if (!report) return res.status(404).json({ message: 'Report not found.' });
+  const result = await readEvidence(report.filePath, report.sha256Hash);
+  if (!result.bytes) return res.status(result.status).json({ message: result.message });
+  res.set({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+  return res.attachment('report-' + input.reportId + '.pdf').send(result.bytes);
+}
+
+exports.downloadReport = downloadReport;
