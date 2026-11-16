@@ -7,4 +7,6 @@ router.get('/panchnamas/:panchnamaId/reports', requireAuth, controller.listRepor
 
 router.get('/reports/:reportId', requireAuth, controller.getReport);
 
+router.post('/panchnamas/:panchnamaId/reports', requireAuth, controller.generateReport);
+
 module.exports = router;

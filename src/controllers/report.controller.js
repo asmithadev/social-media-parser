@@ -1,3 +1,8 @@
+const { createHash, randomUUID } = require('node:crypto');
+const { mkdir, writeFile } = require('node:fs/promises');
+const path = require('node:path');
+const renderReport = require('../utils/report-pdf');
+const recordReportEvent = require('../utils/audit');
 const prisma = require('../config/db-config');
 const { caseScope, readInput } = require('../utils/records');
 
@@ -32,3 +37,58 @@ async function getReport(req, res) {
 }
 
 exports.getReport = getReport;
+
+async function generateReport(req, res) {
+  if (!['admin', 'examiner'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Examiner or administrator access is required.' });
+  }
+  const input = readInput(req, res, ['panchnamaId']);
+  if (!input) return;
+  const record = await prisma.panchnama.findFirst({
+    where: { id: input.panchnamaId, ...panchnamaScope(req.user) },
+    include: {
+      assignment: { include: { case: { select: { caseNumber: true } }, user: { select: { fullName: true } } } },
+      witnesses: { orderBy: { id: 'asc' }, select: { fullName: true } },
+      sessions: {
+        orderBy: { id: 'asc' },
+        include: {
+          account: { include: { platform: { include: { sections: { orderBy: { id: 'asc' } } } } } },
+          outcomes: true,
+          screenshots: { orderBy: [{ platformSectionId: 'asc' }, { sequenceNo: 'asc' }], include: { section: true } },
+        },
+      },
+    },
+  });
+  if (!record) return res.status(404).json({ message: 'Panchnama not found.' });
+  if (record.sessions.some(session => session.status === 'open')) {
+    return res.status(409).json({ message: 'Finish open capture sessions before generating a report.' });
+  }
+
+  const result = await prisma.$transaction(async tx => {
+    // Lock the parent while allocating the next report version.
+    await tx.$queryRaw`SELECT panchnama_id FROM panchnamas WHERE panchnama_id = ${record.id} FOR UPDATE`;
+    const latest = await tx.report.findFirst({
+      where: { panchnamaId: record.id }, orderBy: { versionNo: 'desc' }, select: { versionNo: true },
+    });
+    const versionNo = (latest?.versionNo ?? 0) + 1;
+    const rendered = await renderReport(record, versionNo);
+    if (!rendered.bytes) return rendered;
+
+    const filePath = path.join('reports', randomUUID() + '.pdf');
+    const absolutePath = path.resolve(process.env.EVIDENCE_DIR || 'evidence', filePath);
+    const sha256Hash = createHash('sha256').update(rendered.bytes).digest('hex');
+    await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });
+    const report = await tx.report.create({
+      data: { panchnamaId: record.id, versionNo, filePath, sha256Hash, generatedBy: req.user.id },
+      omit: { filePath: true },
+    });
+    await recordReportEvent(tx, req.user.id, 'REPORT_GENERATED', report.id);
+    await writeFile(absolutePath, rendered.bytes, { flag: 'wx', mode: 0o600, flush: true });
+    return { report };
+  }, { timeout: 30000 });
+
+  if (!result.report) return res.status(result.status).json({ message: result.message });
+  return res.status(201).json(result);
+}
+
+exports.generateReport = generateReport;
