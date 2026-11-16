@@ -11,4 +11,6 @@ router.post('/panchnamas/:panchnamaId/reports', requireAuth, controller.generate
 
 router.get('/reports/:reportId/file', requireAuth, controller.downloadReport);
 
+router.post('/reports/:reportId/approve', requireAuth, controller.approveReport);
+
 module.exports = router;

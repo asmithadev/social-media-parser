@@ -109,3 +109,36 @@ async function downloadReport(req, res) {
 }
 
 exports.downloadReport = downloadReport;
+
+async function approveReport(req, res) {
+  if (!['admin', 'reviewer'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Reviewer or administrator access is required.' });
+  }
+  const input = readInput(req, res, ['reportId']);
+  if (!input) return;
+  const where = { id: input.reportId, panchnama: panchnamaScope(req.user) };
+  const result = await prisma.$transaction(async tx => {
+    const report = await tx.report.findFirst({ where, omit: { filePath: true } });
+    if (!report) return { status: 404, message: 'Report not found.' };
+    if (report.generatedBy === req.user.id) {
+      return { status: 403, message: 'The report author cannot approve this version.' };
+    }
+    if (report.approvedBy === req.user.id) return { report };
+    const [approved] = await tx.report.updateManyAndReturn({
+      where: { ...where, approvedBy: null },
+      data: { approvedBy: req.user.id, approvedAt: new Date() },
+      omit: { filePath: true },
+    });
+    if (!approved) {
+      const current = await tx.report.findFirst({ where, omit: { filePath: true } });
+      if (current?.approvedBy === req.user.id) return { report: current };
+      return { status: 409, message: 'This report version has already been approved.' };
+    }
+    await recordReportEvent(tx, req.user.id, 'REPORT_APPROVED', approved.id);
+    return { report: approved };
+  });
+  if (!result.report) return res.status(result.status).json({ message: result.message });
+  return res.json(result);
+}
+
+exports.approveReport = approveReport;
