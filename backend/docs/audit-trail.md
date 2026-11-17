@@ -3,7 +3,7 @@
 ## Enable it
 
 Install dependencies, generate Prisma's client, and apply the migrations to your
-configured PostgreSQL database:
+configured PostgreSQL database. Run these commands from the repository's `backend/` directory:
 
 ```sh
 npm ci

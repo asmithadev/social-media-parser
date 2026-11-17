@@ -3,3 +3,9 @@ node_modules/
 logs/*
 !logs/.gitkeep
 evidence/
+# Local configuration and build output
+.env.*
+!.env.example
+/backend/logs/*
+!/backend/logs/.gitkeep
+/frontend/dist/

@@ -38,7 +38,7 @@ What it deliberately does **not** do: post, send, like or delete anything on the
 | Parsing | Reads text out of the screenshots and stores the parsed data (posts, messages, friends and so on) in MongoDB, since the shape differs by platform. |
 | Evidence integrity | SHA-256 hash on every screenshot and report. Files are never overwritten; a recapture is saved as a new item. |
 | Report generation | Builds the documented PDF report. Reports are versioned, and a reviewer must approve one before it is final. |
-| Audit trail | Implemented: database-backed logging for record changes, captures, report generation and approvals, plus login events. SHA-256 chaining and admin verification endpoints are available. Print tracking awaits a print workflow. See [audit setup and API documentation](docs/audit-trail.md). |
+| Audit trail | Implemented: database-backed logging for record changes, captures, report generation and approvals, plus login events. SHA-256 chaining and admin verification endpoints are available. Print requests are recorded as audit events. See [audit setup and API documentation](backend/docs/audit-trail.md). |
 
 ## What our team is building
 
@@ -59,18 +59,41 @@ We are building this for the project evaluation, in phases.
 | macOS version | Electron, Playwright |
 | iOS version | Appium with XCUITest, driven from the Mac |
 | OCR and parsing | Python (Tesseract, OpenCV, NumPy) |
-| Reports | Puppeteer (HTML to PDF) |
+| Reports | PDFKit |
 | Version control | Git, GitHub, GitHub Actions |
 
 AI features (Gemini or OpenAI APIs, embeddings for search) are optional and off by default, because sending evidence to an outside service would take it out of the agency's network.
 
-**Status:** backend implementation in progress. Authentication, record management,
-capture-session APIs, and the audit trail are implemented. The frontend, capture
-engines, OCR/parsing, and report generation/review workflows remain planned.
+**Status:** The backend implements authentication, case management, capture sessions,
+screenshot storage, parsed evidence lookup, PDF generation and review, and audit
+verification. The React frontend, automated capture clients, and OCR ingestion
+remain to be built.
 
 ---
 
 ## Repository contents
 
-- `README.md`: this file
-- ER diagram, data flow diagram and tech stack document for Phase 1
+- `backend/` contains the Express API, MVC structure, Prisma schema, migrations, SQL verification, and tests.
+- `frontend/` is reserved for the React app.
+- `backend/docs/audit-trail.md` documents the audit API and its integration tests.
+
+## Local backend setup
+
+From the repository root, enter the backend before running npm or Prisma:
+
+```sh
+cd backend
+npm ci
+npx prisma generate
+npx prisma migrate status
+npx prisma migrate deploy
+npm start
+```
+
+Set `DATABASE_URL`, `MONGO_URI`, and `JWT_SECRET` in your local `backend/.env`
+or in the API host environment. Use an absolute `EVIDENCE_DIR` path for
+existing local evidence or a private persistent mount on the API host.
+
+Configure separate deployment roots when both apps are ready. The Express API
+runs from `backend/`. The React build will run from `frontend/`. Configure
+the frontend's public API base URL and the API's allowed frontend origin.
