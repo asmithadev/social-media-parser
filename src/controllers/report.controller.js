@@ -3,7 +3,7 @@ const { mkdir, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const renderReport = require('../utils/report-pdf');
 const readEvidence = require('../utils/evidence-file');
-const recordReportEvent = require('../utils/audit');
+const { withAuditActor } = require('../services/audit');
 const prisma = require('../config/db-config');
 const { caseScope, readInput } = require('../utils/records');
 
@@ -65,7 +65,7 @@ async function generateReport(req, res) {
     return res.status(409).json({ message: 'Finish open capture sessions before generating a report.' });
   }
 
-  const result = await prisma.$transaction(async tx => {
+  const result = await withAuditActor(req.user.id, async tx => {
     // Lock the parent while allocating the next report version.
     await tx.$queryRaw`SELECT panchnama_id FROM panchnamas WHERE panchnama_id = ${record.id} FOR UPDATE`;
     const latest = await tx.report.findFirst({
@@ -83,7 +83,6 @@ async function generateReport(req, res) {
       data: { panchnamaId: record.id, versionNo, filePath, sha256Hash, generatedBy: req.user.id },
       omit: { filePath: true },
     });
-    await recordReportEvent(tx, req.user.id, 'REPORT_GENERATED', report.id);
     await writeFile(absolutePath, rendered.bytes, { flag: 'wx', mode: 0o600, flush: true });
     return { report };
   }, { timeout: 30000 });
@@ -117,7 +116,7 @@ async function approveReport(req, res) {
   const input = readInput(req, res, ['reportId']);
   if (!input) return;
   const where = { id: input.reportId, panchnama: panchnamaScope(req.user) };
-  const result = await prisma.$transaction(async tx => {
+  const result = await withAuditActor(req.user.id, async tx => {
     const report = await tx.report.findFirst({ where, omit: { filePath: true } });
     if (!report) return { status: 404, message: 'Report not found.' };
     if (report.generatedBy === req.user.id) {
@@ -134,7 +133,6 @@ async function approveReport(req, res) {
       if (current?.approvedBy === req.user.id) return { report: current };
       return { status: 409, message: 'This report version has already been approved.' };
     }
-    await recordReportEvent(tx, req.user.id, 'REPORT_APPROVED', approved.id);
     return { report: approved };
   });
   if (!result.report) return res.status(result.status).json({ message: result.message });
@@ -146,13 +144,21 @@ exports.approveReport = approveReport;
 async function requestPrint(req, res) {
   const input = readInput(req, res, ['reportId']);
   if (!input) return;
-  const event = await prisma.$transaction(async tx => {
+  const event = await withAuditActor(req.user.id, async tx => {
     const report = await tx.report.findFirst({
       where: { id: input.reportId, panchnama: panchnamaScope(req.user) },
       select: { id: true },
     });
     if (!report) return null;
-    return recordReportEvent(tx, req.user.id, 'REPORT_PRINT_REQUESTED', report.id);
+    return tx.auditLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'REPORT_PRINT_REQUESTED',
+        entityType: 'report',
+        entityId: report.id,
+        chainHash: '0'.repeat(64),
+      },
+    });
   });
   if (!event) return res.status(404).json({ message: 'Report not found.' });
   return res.status(201).json({ auditLogId: String(event.id) });

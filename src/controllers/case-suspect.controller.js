@@ -26,16 +26,16 @@ async function listLinks(req, res) {
 async function linkSuspect(req, res) {
   const input = readInput(req, res, ['caseId'], linkSchema);
   if (!input) return;
-  return writeRecord(res, 201, 'caseSuspect', () =>
-    prisma.caseSuspect.create({ data: { caseId: input.caseId, ...input.data } }));
+  return writeRecord(res, 201, 'caseSuspect', req.user.id, tx =>
+    tx.caseSuspect.create({ data: { caseId: input.caseId, ...input.data } }));
 }
 
 async function updateLink(req, res) {
   const input = readInput(req, res, ['caseId', 'suspectId'], updateSchema);
   if (!input) return;
   const { caseId, suspectId, data } = input;
-  return writeRecord(res, 200, 'caseSuspect', () =>
-    prisma.caseSuspect.update({ where: { caseId_suspectId: { caseId, suspectId } }, data }));
+  return writeRecord(res, 200, 'caseSuspect', req.user.id, tx =>
+    tx.caseSuspect.update({ where: { caseId_suspectId: { caseId, suspectId } }, data }));
 }
 
 module.exports = { listLinks, linkSuspect, updateLink };

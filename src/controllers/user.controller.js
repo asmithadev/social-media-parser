@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const { z } = require('zod');
 const prisma = require('../config/db-config');
 const recordId = require('../utils/record-id');
+const { withAuditActor } = require('../services/audit');
 
 const fullName = z.string().trim().min(1).max(150);
 const createUserSchema = z.strictObject({
@@ -35,7 +36,8 @@ async function createUser(req, res) {
   const passwordHash = await bcrypt.hash(password, 12);
 
   try {
-    const user = await prisma.user.create({ data: { ...profile, passwordHash }, select });
+    const user = await withAuditActor(req.user.id, tx =>
+      tx.user.create({ data: { ...profile, passwordHash }, select }));
     return res.status(201).json({ user });
   } catch (error) {
     if (error.code === 'P2002') {
@@ -56,7 +58,8 @@ async function updateUser(req, res) {
   }
 
   try {
-    const user = await prisma.user.update({ where: { id: id.data }, data: input.data, select });
+    const user = await withAuditActor(req.user.id, tx =>
+      tx.user.update({ where: { id: id.data }, data: input.data, select }));
     return res.json({ user });
   } catch (error) {
     if (error.code === 'P2025') {

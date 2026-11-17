@@ -2,6 +2,7 @@ const { z } = require('zod');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db-config');
+const { recordLogin } = require('../services/audit');
 
 const loginSchema = z.object({
   email: z.string().trim().pipe(z.email()),
@@ -14,6 +15,7 @@ async function login(req, res) {
   const result = loginSchema.safeParse(req.body);
 
   if (!result.success) {
+    await recordLogin({ success: false, reason: 'invalid_request' });
     return res.status(400).json({
       message: 'Provide a valid email and a non-empty password.',
     });
@@ -27,12 +29,14 @@ async function login(req, res) {
   });
 
   if (!user || !user.active || !(await bcrypt.compare(password, user.passwordHash))) {
+    await recordLogin({ success: false, reason: 'invalid_credentials' });
     return res.status(401).json({ message: 'Invalid email or password.' });
   }
 
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
+    await recordLogin({ success: false, reason: 'authentication_unavailable' });
     return res.status(500).json({ message: 'Login is unavailable.' });
   }
 
@@ -41,6 +45,8 @@ async function login(req, res) {
     subject: String(user.id),
     expiresIn: '1h',
   });
+
+  await recordLogin({ userId: user.id, success: true, reason: 'authenticated' });
 
   return res.status(200).json({ accessToken });
 }

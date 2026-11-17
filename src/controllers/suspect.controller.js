@@ -38,15 +38,15 @@ async function getSuspect(req, res) {
 async function createSuspect(req, res) {
   const input = readInput(req, res, [], suspectSchema);
   if (!input) return;
-  return writeRecord(res, 201, 'suspect', () =>
-    prisma.suspect.create({ data: input.data, select: publicFields }));
+  return writeRecord(res, 201, 'suspect', req.user.id, tx =>
+    tx.suspect.create({ data: input.data, select: publicFields }));
 }
 
 async function updateSuspect(req, res) {
   const input = readInput(req, res, ['suspectId'], updateSchema);
   if (!input) return;
-  return writeRecord(res, 200, 'suspect', () =>
-    prisma.suspect.update({ where: { id: input.suspectId }, data: input.data, select: publicFields }));
+  return writeRecord(res, 200, 'suspect', req.user.id, tx =>
+    tx.suspect.update({ where: { id: input.suspectId }, data: input.data, select: publicFields }));
 }
 
 module.exports = { listSuspects, getSuspect, createSuspect, updateSuspect };

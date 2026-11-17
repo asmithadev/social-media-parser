@@ -38,7 +38,7 @@ What it deliberately does **not** do: post, send, like or delete anything on the
 | Parsing | Reads text out of the screenshots and stores the parsed data (posts, messages, friends and so on) in MongoDB, since the shape differs by platform. |
 | Evidence integrity | SHA-256 hash on every screenshot and report. Files are never overwritten; a recapture is saved as a new item. |
 | Report generation | Builds the documented PDF report. Reports are versioned, and a reviewer must approve one before it is final. |
-| Audit trail | An append-only log of logins, captures, report generation, approvals and prints, with each entry chained to the previous one so tampering shows up. |
+| Audit trail | Implemented: database-backed logging for record changes, captures, report generation and approvals, plus login events. SHA-256 chaining and admin verification endpoints are available. Print tracking awaits a print workflow. See [audit setup and API documentation](docs/audit-trail.md). |
 
 ## What our team is building
 
@@ -64,7 +64,9 @@ We are building this for the project evaluation, in phases.
 
 AI features (Gemini or OpenAI APIs, embeddings for search) are optional and off by default, because sending evidence to an outside service would take it out of the agency's network.
 
-**Status:** design phase. Nothing here is implemented yet; the stack above is the plan, not a finished build.
+**Status:** backend implementation in progress. Authentication, record management,
+capture-session APIs, and the audit trail are implemented. The frontend, capture
+engines, OCR/parsing, and report generation/review workflows remain planned.
 
 ---
 

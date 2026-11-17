@@ -40,15 +40,15 @@ async function createAccount(req, res) {
     select: { id: true },
   });
   if (!platform) return res.status(404).json({ message: 'Active platform not found.' });
-  return writeRecord(res, 201, 'account', () =>
-    prisma.socialAccount.create({ data: { suspectId: input.suspectId, ...input.data } }));
+  return writeRecord(res, 201, 'account', req.user.id, tx =>
+    tx.socialAccount.create({ data: { suspectId: input.suspectId, ...input.data } }));
 }
 
 async function updateAccount(req, res) {
   const input = readInput(req, res, ['accountId'], updateSchema);
   if (!input) return;
-  return writeRecord(res, 200, 'account', () =>
-    prisma.socialAccount.update({ where: { id: input.accountId }, data: input.data }));
+  return writeRecord(res, 200, 'account', req.user.id, tx =>
+    tx.socialAccount.update({ where: { id: input.accountId }, data: input.data }));
 }
 
 module.exports = { listAccounts, createAccount, getAccount, updateAccount };
