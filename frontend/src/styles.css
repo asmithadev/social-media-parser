@@ -8,7 +8,7 @@ body {
   font-size: 16px;
   line-height: 1.5;
 }
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button {
   cursor: pointer;
   padding: 10px 16px;
@@ -53,7 +53,7 @@ p { margin: 0 0 16px; }
 }
 .card { padding: 28px; border: 1px solid #dce2e9; border-radius: 8px; background: white; }
 label { display: block; margin-bottom: 6px; font-weight: 600; }
-input {
+input, select, textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #9aa8b8;
@@ -89,6 +89,15 @@ td:last-child, th:last-child { text-align: right; white-space: nowrap; }
 dt { font-size: 14px; color: #586575; }
 dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .status-text { text-transform: capitalize; }
+.page-menu { display: flex; gap: 10px; margin-bottom: 24px; }
+.admin-forms { display: grid; gap: 24px; }
+.admin-form { max-width: 580px; margin-top: 20px; }
+.admin-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.admin-form input, .admin-form select, .admin-form textarea { margin-bottom: 16px; }
+.admin-form textarea { resize: vertical; }
+.admin-form .error, .admin-form .success { margin-top: 16px; margin-bottom: 0; }
+.success { color: #236a3b; }
+.assignment-list { margin-top: 24px; padding-top: 4px; border-top: 1px solid #e2e8f0; }
 @media (max-width: 600px) {
   .header-content { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
   .account-menu { width: 100%; justify-content: space-between; font-size: 14px; }

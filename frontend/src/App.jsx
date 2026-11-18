@@ -2,12 +2,14 @@ import { useState } from 'react';
 import Login from './components/Login';
 import CaseList from './components/CaseList';
 import CaseDetails from './components/CaseDetails';
+import AdminPanel from './components/AdminPanel';
 import { isDemoMode, signIn } from './api';
 
 export default function App() {
   // Keep the signed-in user and selected case in React state.
   const [session, setSession] = useState(null);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [page, setPage] = useState('cases');
 
   async function handleLogin(email, password) {
     const result = await signIn(email, password);
@@ -17,6 +19,7 @@ export default function App() {
   function handleLogout() {
     setSession(null);
     setSelectedCaseId(null);
+    setPage('cases');
   }
 
   return (
@@ -35,8 +38,18 @@ export default function App() {
 
       <main className="container">
         {isDemoMode && <p className="demo-notice">Demo mode · All accounts and case records shown here are fictional.</p>}
+        {session && session.user.role === 'admin' && (
+          <nav className="page-menu" aria-label="Main navigation">
+            <button className={page === 'cases' ? '' : 'secondary'} aria-current={page === 'cases' ? 'page' : undefined}
+              onClick={() => { setPage('cases'); setSelectedCaseId(null); }}>Cases</button>
+            <button className={page === 'admin' ? '' : 'secondary'} aria-current={page === 'admin' ? 'page' : undefined}
+              onClick={() => setPage('admin')}>Admin tools</button>
+          </nav>
+        )}
         {!session ? (
           <Login onLogin={handleLogin} />
+        ) : page === 'admin' && session.user.role === 'admin' ? (
+          <AdminPanel token={session.token} />
         ) : selectedCaseId === null ? (
           <CaseList token={session.token} onSelectCase={setSelectedCaseId} />
         ) : (

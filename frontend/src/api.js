@@ -52,3 +52,36 @@ export async function getCase(caseId, token) {
   const data = await request(`/cases/${caseId}`, token);
   return data.case;
 }
+
+// Admin tools use the real backend. The demo account is an examiner.
+function adminRequest(endpoint, token, options = {}) {
+  if (isDemoMode) throw new Error('Admin tools need a real administrator account.');
+  return request(endpoint, token, options);
+}
+
+export async function createCase(token, fields) {
+  const data = await adminRequest('/cases', token, { method: 'POST', body: JSON.stringify(fields) });
+  return data.case;
+}
+
+export async function getUsers(token) {
+  const { users } = await adminRequest('/users', token);
+  return users;
+}
+
+export async function createUser(token, fields) {
+  const { user } = await adminRequest('/users', token, { method: 'POST', body: JSON.stringify(fields) });
+  return user;
+}
+
+export async function getAssignments(token, caseId) {
+  const { assignments } = await adminRequest(`/cases/${caseId}/assignments`, token);
+  return assignments;
+}
+
+export async function assignUser(token, caseId, fields) {
+  const { assignment } = await adminRequest(`/cases/${caseId}/assignments`, token, {
+    method: 'POST', body: JSON.stringify(fields),
+  });
+  return assignment;
+}

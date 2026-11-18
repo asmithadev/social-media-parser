@@ -1,6 +1,6 @@
 # Basic React frontend
 
-Three screens: sign in, case list, and case details. The app uses JavaScript,
+Screens: sign in, case list, case details, and admin tools. The app uses JavaScript,
 React function components, `useState`, `useEffect`, and plain CSS. Vite runs and
 builds it. There is no routing library, state library, or UI framework.
 
@@ -46,22 +46,48 @@ The frontend uses these existing contracts:
 | `GET /api/auth/me` | `{ user: { id, email, fullName, role } }` |
 | `GET /api/cases` | `{ cases: [...] }` |
 | `GET /api/cases/:caseId` | `{ case: { id, caseNumber, title, description, createdBy, status, createdAt } }` |
+| `POST /api/cases` with `{ caseNumber, title, description }` | `{ case: {...} }` |
+| `GET /api/users` | `{ users: [...] }` (no passwords or password hashes) |
+| `POST /api/users` with `{ fullName, email, password, role }` | `{ user: {...} }` |
+| `GET /api/cases/:caseId/assignments` | `{ assignments: [...] }` |
+| `POST /api/cases/:caseId/assignments` with `{ userId, userNotes }` | `{ assignment: {...} }` |
 
 After login, requests include `Authorization: Bearer <token>`. Express continues
 to enforce roles and case assignments. The token stays in memory; no password
 or token is stored in localStorage. Login and data requests display errors,
 and case screens display loading and empty states.
 
+## Use the admin tools
+
+Sign in with a real administrator account and click **Admin tools**.
+
+1. Create a case using its number, title and optional description.
+2. Create a user with a name, email, password and examiner/reviewer role.
+3. Choose a case and a user in the assignment form, then click **Assign user**.
+
+New cases and users appear in the assignment dropdowns immediately. Existing
+assignments are listed below the form, and already-assigned users are excluded
+from the user dropdown. Only active examiners and reviewers can be assigned.
+Click **Cases** to see newly created cases in the regular list.
+
+An examiner/reviewer who signs in sees their assigned cases. Admin navigation is
+hidden for those roles, and Express also rejects unauthorized admin mutations.
+The fictional demo account remains an examiner and uses the original demo screens.
+User creation passwords are sent only to the backend and cleared from the form
+after success; they are not copied into the user list or browser storage.
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
-2. `src/App.jsx` stores the session and switches between the three screens.
+2. `src/App.jsx` stores the session and switches between screens.
 3. `src/components/Login.jsx` handles form fields and submission.
 4. `src/components/CaseList.jsx` loads and searches cases.
 5. `src/components/CaseDetails.jsx` loads one case.
 6. `src/api.js` switches between fictional data and real HTTP requests.
 7. `src/data/demo.js` contains only fictional fixtures.
 8. `src/styles.css` styles the app and includes a small mobile layout rule.
+9. `src/components/AdminPanel.jsx` loads the case/user dropdown data.
+10. `CreateCase.jsx`, `CreateUser.jsx`, and `AssignUser.jsx` each handle one form.
 
 ## Production build
 
@@ -77,5 +103,4 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case creation, editing, panchnamas, evidence review and report screens are not
-part of these first three screens.
+Case editing, panchnamas, evidence review and report screens remain to be built.

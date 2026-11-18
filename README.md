@@ -68,7 +68,9 @@ AI features (Gemini or OpenAI APIs, embeddings for search) are optional and off 
 screenshot storage, parsed evidence lookup, PDF generation and review, and audit
 verification. A basic React frontend provides sign-in, case listing, and case
 details, with fictional demo data by default and an option to use the existing
-API. Automated capture clients, OCR ingestion, and the remaining frontend screens
+API. Real administrators can create cases, create examiners/reviewers, and assign
+users to cases through simple admin forms. Automated capture clients, OCR
+ingestion, and the remaining frontend screens
 remain to be built.
 
 ---
