@@ -37,3 +37,22 @@ export const demoCases = [
     createdAt: '2026-11-18T08:00:00Z',
   },
 ];
+
+export const demoSuspects = [
+  { id: 11, fullName: 'Fictional Person One', alias: 'Training alias' },
+  { id: 12, fullName: 'Fictional Person Two', alias: null },
+];
+
+export const demoCaseSuspects = [
+  { id: 1, caseId: 1, suspectId: 11, involvement: 'suspect', suspect: demoSuspects[0] },
+  { id: 2, caseId: 2, suspectId: 12, involvement: 'suspect', suspect: demoSuspects[1] },
+];
+
+export const demoPlatforms = [
+  { id: 1, name: 'facebook', active: true },
+  { id: 2, name: 'instagram', active: true },
+];
+
+export const demoAccounts = [
+  { id: 21, suspectId: 11, platformId: 2, handle: 'fictional_training_account', profileUrl: 'https://example.test/training-account' },
+];

@@ -51,6 +51,13 @@ The frontend uses these existing contracts:
 | `POST /api/users` with `{ fullName, email, password, role }` | `{ user: {...} }` |
 | `GET /api/cases/:caseId/assignments` | `{ assignments: [...] }` |
 | `POST /api/cases/:caseId/assignments` with `{ userId, userNotes }` | `{ assignment: {...} }` |
+| `GET /api/suspects` | `{ suspects: [...] }` |
+| `POST /api/suspects` with `{ fullName, alias }` | `{ suspect: {...} }` |
+| `GET /api/cases/:caseId/suspects` | `{ suspects: [{ id, suspectId, involvement, involvementDetails, suspect: { id, fullName, alias } }] }` |
+| `POST /api/cases/:caseId/suspects` with `{ suspectId, involvement, involvementDetails }` | `{ caseSuspect: {...} }` |
+| `GET /api/platforms` | `{ platforms: [...] }` |
+| `GET /api/suspects/:suspectId/accounts` | `{ accounts: [...] }` |
+| `POST /api/suspects/:suspectId/accounts` with `{ platformId, handle, profileUrl }` | `{ account: {...} }` |
 
 After login, requests include `Authorization: Bearer <token>`. Express continues
 to enforce roles and case assignments. The token stays in memory; no password
@@ -76,6 +83,32 @@ The fictional demo account remains an examiner and uses the original demo screen
 User creation passwords are sent only to the backend and cleared from the form
 after success; they are not copied into the user list or browser storage.
 
+## Suspects and social accounts
+
+Open a case with **View case**. An administrator can:
+
+1. Register a suspect using their full name and optional alias. This creates a
+   registry record; it does not automatically link the person to a case.
+2. Select the registered suspect, choose suspect/accused involvement, and click
+   **Link suspect to case**. Optional involvement details belong to this case.
+3. Choose a linked suspect and register an account using a platform, handle,
+   and optional HTTP/HTTPS profile URL.
+
+An existing suspect can be linked to another case without creating a second
+registry record. Already-linked suspects are excluded from the linking dropdown.
+If linking fails after registration, retry with the existing record in the
+dropdown. Social accounts belong to the suspect, so authorized cases sharing
+that suspect see the same account registry.
+
+Assigned examiners/reviewers can view the linked suspects and accounts. Only
+admins see the registration/linking forms; the backend also enforces these
+permissions. The platform dropdown uses the backend's active platforms. Passwords
+for social platforms are not collected. Profile links open in a new tab.
+
+The demo case `DEMO-001` includes a fictional suspect/account, `DEMO-002` has a
+fictional suspect without an account, and `DEMO-003` has no suspects. These demo
+records are read-only and do not change the database.
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -88,6 +121,9 @@ after success; they are not copied into the user list or browser storage.
 8. `src/styles.css` styles the app and includes a small mobile layout rule.
 9. `src/components/AdminPanel.jsx` loads the case/user dropdown data.
 10. `CreateCase.jsx`, `CreateUser.jsx`, and `AssignUser.jsx` each handle one form.
+11. `CaseSuspects.jsx` loads suspects linked to the selected case.
+12. `AddSuspect.jsx` has separate registration and linking forms.
+13. `SuspectAccounts.jsx` lists accounts and has the account registration form.
 
 ## Production build
 

@@ -98,6 +98,10 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .admin-form .error, .admin-form .success { margin-top: 16px; margin-bottom: 0; }
 .success { color: #236a3b; }
 .assignment-list { margin-top: 24px; padding-top: 4px; border-top: 1px solid #e2e8f0; }
+.case-sections { display: grid; gap: 24px; }
+.suspect-accounts { margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0; }
+.form-feedback { margin-top: 16px; }
+.account-handle { overflow-wrap: anywhere; }
 @media (max-width: 600px) {
   .header-content { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
   .account-menu { width: 100%; justify-content: space-between; font-size: 14px; }

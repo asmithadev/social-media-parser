@@ -1,4 +1,7 @@
-import { demoCases, demoCredentials, demoUser } from './data/demo';
+import {
+  demoCases, demoCredentials, demoUser,
+  demoSuspects, demoCaseSuspects, demoPlatforms, demoAccounts,
+} from './data/demo';
 
 export const isDemoMode = import.meta.env.VITE_USE_DEMO_DATA !== 'false';
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
@@ -84,4 +87,47 @@ export async function assignUser(token, caseId, fields) {
     method: 'POST', body: JSON.stringify(fields),
   });
   return assignment;
+}
+
+export async function getCaseSuspects(token, caseId) {
+  if (isDemoMode) return demoCaseSuspects.filter(link => link.caseId === Number(caseId));
+  const { suspects } = await request(`/cases/${caseId}/suspects`, token);
+  return suspects;
+}
+
+export async function getSuspects(token) {
+  if (isDemoMode) return demoSuspects;
+  const { suspects } = await request('/suspects', token);
+  return suspects;
+}
+
+export async function createSuspect(token, fields) {
+  const { suspect } = await adminRequest('/suspects', token, { method: 'POST', body: JSON.stringify(fields) });
+  return suspect;
+}
+
+export async function linkSuspect(token, caseId, fields) {
+  const { caseSuspect } = await adminRequest(`/cases/${caseId}/suspects`, token, {
+    method: 'POST', body: JSON.stringify(fields),
+  });
+  return caseSuspect;
+}
+
+export async function getPlatforms(token) {
+  if (isDemoMode) return demoPlatforms;
+  const { platforms } = await request('/platforms', token);
+  return platforms;
+}
+
+export async function getAccounts(token, suspectId) {
+  if (isDemoMode) return demoAccounts.filter(account => account.suspectId === Number(suspectId));
+  const { accounts } = await request(`/suspects/${suspectId}/accounts`, token);
+  return accounts;
+}
+
+export async function createAccount(token, suspectId, fields) {
+  const { account } = await adminRequest(`/suspects/${suspectId}/accounts`, token, {
+    method: 'POST', body: JSON.stringify(fields),
+  });
+  return account;
 }
