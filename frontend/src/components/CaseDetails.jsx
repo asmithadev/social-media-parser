@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getCase } from '../api';
+import CaseSuspects from './CaseSuspects';
 
-export default function CaseDetails({ caseId, token, onBack }) {
+export default function CaseDetails({ caseId, token, onBack, canEdit }) {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,6 +23,7 @@ export default function CaseDetails({ caseId, token, onBack }) {
       {loading ? <p className="card" role="status">Loading case details…</p> : error ? (
         <p className="card error" role="alert">{error}</p>
       ) : record && (
+        <div className="case-sections">
         <article className="card">
           <div className="case-heading">
             <div><p className="case-number muted">{record.caseNumber}</p><h2>{record.title}</h2></div>
@@ -38,6 +40,8 @@ export default function CaseDetails({ caseId, token, onBack }) {
             <div><dt>Status</dt><dd className="status-text">{record.status}</dd></div>
           </dl>
         </article>
+        <CaseSuspects caseId={caseId} token={token} canEdit={canEdit} />
+        </div>
       )}
     </section>
   );
