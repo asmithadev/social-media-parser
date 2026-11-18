@@ -87,12 +87,25 @@ npm ci
 npx prisma generate
 npx prisma migrate status
 npx prisma migrate deploy
+npx prisma db seed
 npm start
 ```
 
 Set `DATABASE_URL`, `MONGO_URI`, and `JWT_SECRET` in your local `backend/.env`
 or in the API host environment. Use an absolute `EVIDENCE_DIR` path for
 existing local evidence or a private persistent mount on the API host.
+
+For a new checkout, copy `backend/.env.example` to `backend/.env` and replace
+the example values before running Prisma or starting the API. Create the target
+PostgreSQL database first and ensure MongoDB is running. On macOS, MongoDB's
+[installation guide](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-os-x/)
+describes its Homebrew installation and service commands. An existing local
+`.env` should be preserved; it contains computer-specific paths and secrets.
+
+Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` before seeding to create the
+initial administrator. The seed preserves existing users and credentials.
+Check `http://localhost:3000/health` after startup; both databases should report
+`connected`. The port can be changed with `PORT`.
 
 Configure separate deployment roots when both apps are ready. The Express API
 runs from `backend/`. The React build will run from `frontend/`. Configure
