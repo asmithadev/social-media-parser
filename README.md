@@ -66,7 +66,9 @@ AI features (Gemini or OpenAI APIs, embeddings for search) are optional and off 
 
 **Status:** The backend implements authentication, case management, capture sessions,
 screenshot storage, parsed evidence lookup, PDF generation and review, and audit
-verification. The React frontend, automated capture clients, and OCR ingestion
+verification. A basic React frontend provides sign-in, case listing, and case
+details, with fictional demo data by default and an option to use the existing
+API. Automated capture clients, OCR ingestion, and the remaining frontend screens
 remain to be built.
 
 ---
@@ -74,7 +76,7 @@ remain to be built.
 ## Repository contents
 
 - `backend/` contains the Express API, MVC structure, Prisma schema, migrations, SQL verification, and tests.
-- `frontend/` is reserved for the React app.
+- `frontend/` contains the basic React app; see its [setup guide](frontend/README.md).
 - `backend/docs/audit-trail.md` documents the audit API and its integration tests.
 
 ## Local backend setup
