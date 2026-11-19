@@ -274,6 +274,34 @@ screenshots and hashes. It does not yet embed extracted OCR text.
 | `POST /api/reports/:reportId/approve` | `{ report: {...} }` |
 | `POST /api/reports/:reportId/print-requests` | `{ auditLogId }` |
 
+## Audit screen
+
+Sign in as a real administrator and click **Audit logs**. Examiners/reviewers
+do not see that navigation button, and the backend also rejects their requests.
+The demo account remains an examiner, so this page needs real-data mode.
+
+Entries load oldest first in pages of 50. Use **Load more entries** for the next
+page or **Refresh entries** to restart at the beginning. Each entry shows its ID,
+local timestamp, actor, action and target record. Expand **View details** for the
+chain hash and detail text. IDs and cursors remain strings for 64-bit precision.
+
+**Verify hash chain** checks the entire stored chain, independently of table
+pagination. The result shows success/failure, entry count, last ID/hash and the
+first invalid entry when available. A failed verification can arrive with HTTP
+200; the UI uses the result's `valid` field rather than the HTTP status alone.
+Verification is a snapshot; it does not continuously monitor later writes.
+
+A valid remaining prefix cannot reveal deletion of the chain's final entries.
+Keep a trusted checkpoint (ID/hash) outside the database. Advanced checkpoint
+comparison is available through the existing API, documented in
+[`backend/docs/audit-trail.md`](../backend/docs/audit-trail.md); this basic page
+does not yet submit checkpoints or store them automatically.
+
+| Request | Response |
+| --- | --- |
+| `GET /api/audit-logs?limit=50&after=…` | `{ logs: [...], nextCursor }` |
+| `GET /api/audit-logs/verify` | `{ valid, checked, headId, headHash, firstInvalidId, checkpointMatches }` |
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -303,6 +331,8 @@ screenshots and hashes. It does not yet embed extracted OCR text.
 25. `EvidenceSearch.jsx` searches the current case's parsed text.
 26. `Reports.jsx` lists versions and handles generation, approval and print requests.
 27. `ReportDownload.jsx` verifies PDF bytes and prepares private download links.
+28. `AuditLogs.jsx` loads and paginates audit entries.
+29. `AuditVerification.jsx` verifies the chain and displays the result.
 
 ## Production build
 
@@ -318,5 +348,5 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing and audit screens remain to be built. OCR currently extracts English
+Case editing remains to be built. OCR currently extracts English
 plain text; platform-specific structured parsing and automated capture remain pending.
