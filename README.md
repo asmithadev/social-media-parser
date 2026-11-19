@@ -58,7 +58,7 @@ We are building this for the project evaluation, in phases.
 | Databases | PostgreSQL (structured records), MongoDB (parsed content) |
 | macOS version | Electron, Playwright |
 | iOS version | Appium with XCUITest, driven from the Mac |
-| OCR and parsing | Python (Tesseract, OpenCV, NumPy) |
+| OCR and parsing | Node.js with local Tesseract for English text; structured parsing planned |
 | Reports | PDFKit |
 | Version control | Git, GitHub, GitHub Actions |
 
@@ -77,9 +77,10 @@ The panchnama's examiner can also start/end capture sessions and record section
 outcomes through basic forms; authorized users can view progress.
 Session screens also support PNG upload, screenshot lists, hash/timestamp display,
 and verified previews/downloads with integrity errors shown to the user.
-Automated capture clients, OCR
-ingestion, and the remaining frontend screens
-remain to be built.
+Local English OCR with Tesseract saves text to MongoDB, supports retries, and
+provides case-scoped text search in the React app. Install `tesseract` before use.
+Automated capture clients, platform-specific structured parsing, and the remaining
+frontend screens remain to be built.
 
 ---
 
