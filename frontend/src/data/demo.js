@@ -56,3 +56,11 @@ export const demoPlatforms = [
 export const demoAccounts = [
   { id: 21, suspectId: 11, platformId: 2, handle: 'fictional_training_account', profileUrl: 'https://example.test/training-account' },
 ];
+
+export const demoPanchnamas = [
+  { id: 31, caseId: 1, examinerId: 2, panchnamaNo: 'DEMO-P-001', authorityRef: 'Fictional training authority', location: 'Training room', heldAt: '2026-11-19T04:30:00Z' },
+];
+
+export const demoWitnesses = [
+  { id: 41, panchnamaId: 31, fullName: 'Fictional Training Witness' },
+];

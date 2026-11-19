@@ -109,6 +109,31 @@ The demo case `DEMO-001` includes a fictional suspect/account, `DEMO-002` has a
 fictional suspect without an account, and `DEMO-003` has no suspects. These demo
 records are read-only and do not change the database.
 
+## Panchnamas and witnesses
+
+Open **View case** and scroll to **Panchnamas and witnesses**.
+
+- An assigned examiner can create a panchnama with its number, authority
+  reference, location, and date/time. Enter the time in your computer's local
+  timezone; the form converts it to UTC for storage and displays it locally.
+- Choose a panchnama to view its details and witness names.
+- Only the examiner who created that panchnama can add witnesses. A name is
+  required; a contact number is optional. Contact numbers are submitted to the
+  backend but are not returned by the witness-list endpoint or displayed.
+- Admins, assigned reviewers, and other assigned examiners can view records.
+  A case assignment does not let another examiner add witnesses to someone
+  else's panchnama. The backend enforces these permissions as well.
+- The demo includes a read-only panchnama and witness under `DEMO-001`.
+
+These existing API contracts are used:
+
+| Request | Response |
+| --- | --- |
+| `GET /api/cases/:caseId/panchnamas` | `{ panchnamas: [...] }` |
+| `POST /api/cases/:caseId/panchnamas` with `{ panchnamaNo, authorityRef, location, heldAt }` | `{ panchnama: {...} }` |
+| `GET /api/panchnamas/:panchnamaId/witnesses` | `{ witnesses: [{ id, fullName }] }` |
+| `POST /api/panchnamas/:panchnamaId/witnesses` with `{ fullName, contactNo }` | `{ witness: { id, fullName } }` |
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -124,6 +149,9 @@ records are read-only and do not change the database.
 11. `CaseSuspects.jsx` loads suspects linked to the selected case.
 12. `AddSuspect.jsx` has separate registration and linking forms.
 13. `SuspectAccounts.jsx` lists accounts and has the account registration form.
+14. `Panchnamas.jsx` loads/selects panchnamas and applies role/ownership rules.
+15. `CreatePanchnama.jsx` handles one creation form.
+16. `Witnesses.jsx` loads witness names and has the witness form.
 
 ## Production build
 
@@ -139,4 +167,4 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing, panchnamas, evidence review and report screens remain to be built.
+Case editing, capture sessions, evidence review and report screens remain to be built.

@@ -71,6 +71,8 @@ details, with fictional demo data by default and an option to use the existing
 API. Real administrators can create cases, create examiners/reviewers, and assign
 users to cases through simple admin forms. Case details include suspect linking
 and social-account registration for admins, with viewing for assigned users.
+Assigned examiners can create panchnamas and add witnesses to their own panchnamas;
+other authorized users can view them.
 Automated capture clients, OCR
 ingestion, and the remaining frontend screens
 remain to be built.

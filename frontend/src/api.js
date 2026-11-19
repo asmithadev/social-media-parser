@@ -1,6 +1,7 @@
 import {
   demoCases, demoCredentials, demoUser,
   demoSuspects, demoCaseSuspects, demoPlatforms, demoAccounts,
+  demoPanchnamas, demoWitnesses,
 } from './data/demo';
 
 export const isDemoMode = import.meta.env.VITE_USE_DEMO_DATA !== 'false';
@@ -130,4 +131,32 @@ export async function createAccount(token, suspectId, fields) {
     method: 'POST', body: JSON.stringify(fields),
   });
   return account;
+}
+
+export async function getPanchnamas(token, caseId) {
+  if (isDemoMode) return demoPanchnamas.filter(record => record.caseId === Number(caseId));
+  const { panchnamas } = await request(`/cases/${caseId}/panchnamas`, token);
+  return panchnamas;
+}
+
+export async function createPanchnama(token, caseId, fields) {
+  if (isDemoMode) throw new Error('Sign in with a real examiner account to create a panchnama.');
+  const { panchnama } = await request(`/cases/${caseId}/panchnamas`, token, {
+    method: 'POST', body: JSON.stringify(fields),
+  });
+  return panchnama;
+}
+
+export async function getWitnesses(token, panchnamaId) {
+  if (isDemoMode) return demoWitnesses.filter(witness => witness.panchnamaId === Number(panchnamaId));
+  const { witnesses } = await request(`/panchnamas/${panchnamaId}/witnesses`, token);
+  return witnesses;
+}
+
+export async function addWitness(token, panchnamaId, fields) {
+  if (isDemoMode) throw new Error('Sign in with the panchnama examiner account to add witnesses.');
+  const { witness } = await request(`/panchnamas/${panchnamaId}/witnesses`, token, {
+    method: 'POST', body: JSON.stringify(fields),
+  });
+  return witness;
 }

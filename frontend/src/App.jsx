@@ -54,6 +54,7 @@ export default function App() {
           <CaseList token={session.token} onSelectCase={setSelectedCaseId} />
         ) : (
           <CaseDetails key={selectedCaseId} token={session.token} caseId={selectedCaseId}
+            user={session.user}
             canEdit={session.user.role === 'admin' && !isDemoMode}
             onBack={() => setSelectedCaseId(null)} />
         )}
