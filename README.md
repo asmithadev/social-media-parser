@@ -75,6 +75,8 @@ Assigned examiners can create panchnamas and add witnesses to their own panchnam
 other authorized users can view them.
 The panchnama's examiner can also start/end capture sessions and record section
 outcomes through basic forms; authorized users can view progress.
+Session screens also support PNG upload, screenshot lists, hash/timestamp display,
+and verified previews/downloads with integrity errors shown to the user.
 Automated capture clients, OCR
 ingestion, and the remaining frontend screens
 remain to be built.
