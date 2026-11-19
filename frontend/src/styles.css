@@ -89,7 +89,7 @@ td:last-child, th:last-child { text-align: right; white-space: nowrap; }
 dt { font-size: 14px; color: #586575; }
 dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .status-text { text-transform: capitalize; }
-.page-menu { display: flex; gap: 10px; margin-bottom: 24px; }
+.page-menu { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
 .admin-forms { display: grid; gap: 24px; }
 .admin-form { max-width: 580px; margin-top: 20px; }
 .admin-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -120,6 +120,11 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .reports { margin-top: 28px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
 .report-version { padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
 .report-download { margin: 16px 0; }
+.audit-verification { margin: 24px 0; }
+.audit-verification p { margin-top: 12px; }
+.audit-entry-details { min-width: 220px; max-width: 380px; text-align: left; white-space: normal; }
+.audit-entry-details summary { cursor: pointer; color: #1d4ed8; }
+.audit-entry-details p { margin-top: 12px; }
 @media (max-width: 600px) {
   .header-content { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
   .account-menu { width: 100%; justify-content: space-between; font-size: 14px; }
