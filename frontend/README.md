@@ -239,6 +239,41 @@ TEST_DATABASE_URL=postgresql://YOUR_POSTGRES_USER@127.0.0.1:5432/social_media_pa
 Tests require Tesseract and create/remove their own PostgreSQL schema, MongoDB
 database, and temporary evidence files. They preserve application records.
 
+## Reports
+
+Choose a panchnama and scroll to **Reports**. Admins and assigned examiners can
+click **Generate new PDF version** after finishing open capture sessions. Each
+version is listed with its generation time, author ID, hash and draft/approved
+status. Use **Refresh reports** to load another user's changes.
+
+**Prepare PDF download** fetches the file using the Bearer token, verifies its
+SHA-256 against the listed hash, and enables **Download PDF** / **Open PDF in new
+tab**. Private paths and tokens are never put in download URLs. Verification
+errors prevent download. The browser releases its file URL when the component
+unmounts. Use **Verify PDF again** to recheck a cached download.
+
+Reviewers and admins can approve a draft they did not generate. Review the PDF
+first. The backend enforces case access, role and self-approval restrictions.
+An approval updates metadata; it does not rewrite the PDF or its hash.
+
+For approved versions, **Record print request** adds an audit event. It does not
+operate a printer or prove that printing happened; open/download the PDF to use
+the browser/PDF viewer's print command. This UI only shows that button for approved
+reports, although the existing print-request API itself does not enforce approval.
+Draft PDFs can still be downloaded for review. The demo shows an empty report list
+and does not generate real PDFs.
+
+The current PDF contains panchnama details, witness names, capture outcomes,
+screenshots and hashes. It does not yet embed extracted OCR text.
+
+| Request | Response |
+| --- | --- |
+| `GET /api/panchnamas/:panchnamaId/reports` | `{ reports: [...] }`, newest version first |
+| `POST /api/panchnamas/:panchnamaId/reports` | `{ report: {...} }` |
+| `GET /api/reports/:reportId/file` | PDF bytes, or integrity/file-access error |
+| `POST /api/reports/:reportId/approve` | `{ report: {...} }` |
+| `POST /api/reports/:reportId/print-requests` | `{ auditLogId }` |
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -266,6 +301,8 @@ database, and temporary evidence files. They preserve application records.
 23. `ScreenshotViewer.jsx` loads/verifies a file and displays/downloads it.
 24. `ParsedEvidence.jsx` displays OCR status/text and triggers extraction/retries.
 25. `EvidenceSearch.jsx` searches the current case's parsed text.
+26. `Reports.jsx` lists versions and handles generation, approval and print requests.
+27. `ReportDownload.jsx` verifies PDF bytes and prepares private download links.
 
 ## Production build
 
@@ -281,5 +318,5 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing and report screens remain to be built. OCR currently extracts English
+Case editing and audit screens remain to be built. OCR currently extracts English
 plain text; platform-specific structured parsing and automated capture remain pending.
