@@ -3,6 +3,7 @@ import { getPanchnamas, isDemoMode } from '../api';
 import CreatePanchnama from './CreatePanchnama';
 import Witnesses from './Witnesses';
 import CaptureSessions from './CaptureSessions';
+import Reports from './Reports';
 
 export default function Panchnamas({ caseId, token, user }) {
   const [records, setRecords] = useState([]);
@@ -44,7 +45,7 @@ export default function Panchnamas({ caseId, token, user }) {
       ) : (
         <>
           {canCreate ? <CreatePanchnama token={token} caseId={caseId} onCreated={handleCreated} /> : (
-            <p className="muted">Panchnamas are created by assigned examiners. This view is read-only.</p>
+            <p className="muted">Panchnamas are created by assigned examiners. Panchnama details are read-only for this account.</p>
           )}
           <h3>Panchnamas in this case</h3>
           {!records.length ? <p className="muted">No panchnamas have been recorded yet.</p> : (
@@ -65,6 +66,7 @@ export default function Panchnamas({ caseId, token, user }) {
                     canAdd={canCreate && selected.examinerId === user.id} />
                   <CaptureSessions key={'sessions-' + selected.id} token={token} panchnamaId={selected.id}
                     caseId={caseId} canManage={canCreate && selected.examinerId === user.id} />
+                  <Reports key={'reports-' + selected.id} token={token} panchnamaId={selected.id} user={user} />
                 </>
               )}
             </>
