@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { getCase } from '../api';
 import CaseSuspects from './CaseSuspects';
+import Panchnamas from './Panchnamas';
 
-export default function CaseDetails({ caseId, token, onBack, canEdit }) {
+export default function CaseDetails({ caseId, token, onBack, canEdit, user }) {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,7 +41,8 @@ export default function CaseDetails({ caseId, token, onBack, canEdit }) {
               <div><dt>Status</dt><dd className="status-text">{record.status}</dd></div>
             </dl>
           </article>
-        <CaseSuspects caseId={caseId} token={token} canEdit={canEdit} />
+          <CaseSuspects caseId={caseId} token={token} canEdit={canEdit} />
+          <Panchnamas caseId={caseId} token={token} user={user} />
         </div>
       )}
     </section>
