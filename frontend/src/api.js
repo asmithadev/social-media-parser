@@ -26,7 +26,10 @@ async function fetchResponse(endpoint, token, options = {}) {
   }
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.message || 'The request failed. Please try again.');
+    const error = new Error(data?.message || 'The request failed. Please try again.');
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
   return response;
 }
@@ -257,4 +260,28 @@ export async function getScreenshotFile(token, screenshotId, expectedHash) {
   const actualHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
   if (actualHash !== expectedHash) throw new Error('Screenshot integrity check failed. The file will not be displayed.');
   return new Blob([blob], { type: 'image/png' });
+}
+
+export async function getParsedEvidence(token, screenshotId) {
+  if (isDemoMode) return { artifact: null, parseStatus: 'pending' };
+  try {
+    return await request(`/screenshots/${screenshotId}/parsed-artifact`, token);
+  } catch (error) {
+    if (error.status === 404 && error.data?.parseStatus) {
+      return { artifact: null, parseStatus: error.data.parseStatus, message: error.message };
+    }
+    throw error;
+  }
+}
+
+export function processScreenshot(token, screenshotId) {
+  if (isDemoMode) throw new Error('Demo OCR is read-only.');
+  return request(`/screenshots/${screenshotId}/parse`, token, { method: 'POST' });
+}
+
+export function searchEvidence(token, caseId, query, after = null) {
+  if (isDemoMode) return Promise.resolve({ artifacts: [], nextCursor: null });
+  const params = new URLSearchParams({ q: query });
+  if (after) params.set('after', String(after));
+  return request(`/cases/${caseId}/parsed-artifacts?${params}`, token);
 }
