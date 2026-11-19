@@ -317,15 +317,16 @@ async function getParsedArtifact(req, res) {
   if (!input) return;
   const screenshot = await prisma.screenshot.findFirst({
     where: { id: input.screenshotId, session: sessionScope(req.user) },
-    select: { id: true, parseStatus: true },
+    select: { id: true, parseStatus: true, sha256Hash: true },
   });
   if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
 
+  if (ParsedArtifact.db.readyState !== 1) return res.status(503).json({ message: 'MongoDB is unavailable. Please try again.' });
   const artifact = await ParsedArtifact.findOne({ screenshot_id: screenshot.id }).select('-_id').lean();
-  if (!artifact) {
-    return res.status(404).json({ message: 'Parsed artifact not found.', parseStatus: screenshot.parseStatus });
+  if (!artifact || screenshot.parseStatus !== 'parsed' || artifact.status !== 'parsed' || artifact.data?.sha256Hash !== screenshot.sha256Hash) {
+    return res.status(404).json({ message: artifact?.error || 'No extracted text is available yet.', parseStatus: screenshot.parseStatus });
   }
-  return res.json({ artifact });
+  return res.json({ artifact, parseStatus: screenshot.parseStatus });
 }
 
 exports.getParsedArtifact = getParsedArtifact;
@@ -348,6 +349,7 @@ async function searchParsedArtifacts(req, res) {
   });
   if (!record) return res.status(404).json({ message: 'Case not found.' });
 
+  if (ParsedArtifact.db.readyState !== 1) return res.status(503).json({ message: 'MongoDB is unavailable. Please try again.' });
   const text = query.data.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const artifacts = [];
   let cursor = query.data.after ?? 0;
@@ -356,6 +358,7 @@ async function searchParsedArtifacts(req, res) {
     const screenshots = await prisma.screenshot.findMany({
       where: {
         id: { gt: cursor },
+        parseStatus: 'parsed',
         session: { panchnama: { caseId, assignment: { case: caseScope(req.user) } } },
       },
       orderBy: { id: 'asc' },
@@ -365,6 +368,7 @@ async function searchParsedArtifacts(req, res) {
     if (!screenshots.length) break;
     const matches = await ParsedArtifact.find({
       screenshot_id: { $in: screenshots.map(screenshot => screenshot.id) },
+      status: 'parsed',
       text: { $regex: text, $options: 'i' },
     }).select('screenshot_id text -_id').sort({ screenshot_id: 1 }).limit(51 - artifacts.length).lean();
     artifacts.push(...matches);
