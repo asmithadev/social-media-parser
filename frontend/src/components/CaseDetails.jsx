@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getCase } from '../api';
 import CaseSuspects from './CaseSuspects';
 import Panchnamas from './Panchnamas';
+import EvidenceSearch from './EvidenceSearch';
 
 export default function CaseDetails({ caseId, token, onBack, canEdit, user }) {
   const [record, setRecord] = useState(null);
@@ -43,6 +44,7 @@ export default function CaseDetails({ caseId, token, onBack, canEdit, user }) {
           </article>
           <CaseSuspects caseId={caseId} token={token} canEdit={canEdit} />
           <Panchnamas caseId={caseId} token={token} user={user} />
+          <EvidenceSearch token={token} caseId={caseId} />
         </div>
       )}
     </section>
