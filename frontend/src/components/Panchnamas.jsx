@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getPanchnamas, isDemoMode } from '../api';
 import CreatePanchnama from './CreatePanchnama';
 import Witnesses from './Witnesses';
+import CaptureSessions from './CaptureSessions';
 
 export default function Panchnamas({ caseId, token, user }) {
   const [records, setRecords] = useState([]);
@@ -62,6 +63,8 @@ export default function Panchnamas({ caseId, token, user }) {
                   </dl>
                   <Witnesses key={selected.id} token={token} panchnamaId={selected.id}
                     canAdd={canCreate && selected.examinerId === user.id} />
+                  <CaptureSessions key={'sessions-' + selected.id} token={token} panchnamaId={selected.id}
+                    caseId={caseId} canManage={canCreate && selected.examinerId === user.id} />
                 </>
               )}
             </>
