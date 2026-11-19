@@ -61,6 +61,7 @@ export default function SessionDetails({ token, sessionId, canManage, onUpdated 
             <div><dt>Ended</dt><dd>{session.endedAt ? new Date(session.endedAt).toLocaleString('en-IN') : 'Not ended'}</dd></div>
           </dl>
           <Screenshots token={token} sessionId={sessionId} sections={sections}
+            canParse={canManage}
             canUpload={canEdit} disabled={saving} onBusyChange={setSaving} />
           <h4>Capture sections</h4>
           {!sections.length && <p className="muted">No capture sections are configured for this platform.</p>}
