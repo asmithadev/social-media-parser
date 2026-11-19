@@ -379,6 +379,82 @@ test('PostgreSQL audit trail and API', {
       }
     });
 
+
+    await t.test('report workflow: versions, verified PDFs, approvals, print audit and permissions', async () => {
+      const fs = require('node:fs');
+      const evidenceDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'report-evidence-'));
+      const oldEvidenceDir = process.env.EVIDENCE_DIR;
+      process.env.EVIDENCE_DIR = evidenceDir;
+      try {
+        const pan = (await ok('POST', '/api/cases/' + caseId + '/panchnamas', 'examiner', {
+          panchnamaNo: 'REPORT-UI-P1', authorityRef: 'Fictional authority', location: 'Training room', heldAt: '2026-11-20T05:00:00Z',
+        })).panchnama;
+        const existing = await prisma.captureSession.findUnique({ where: { id: sessionId } });
+        const session = (await ok('POST', '/api/panchnamas/' + pan.id + '/sessions', 'examiner', {
+          accountId: existing.accountId, deviceType: 'macos', toolVersion: '1.0',
+        })).session;
+        await ok('POST', '/api/panchnamas/' + pan.id + '/witnesses', 'examiner', { fullName: 'Fictional Report Witness' });
+        const bytes = fs.readFileSync(path.join(__dirname, 'fixtures/ocr-sample.png'));
+        const upload = await fetch(origin + '/api/sessions/' + session.id + '/screenshots?sectionId=' + sectionId + '&sequenceNo=1', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + tokens.examiner, 'Content-Type': 'image/png' }, body: bytes,
+        });
+        assert.equal(upload.status, 201);
+        const endpoint = '/api/panchnamas/' + pan.id + '/reports';
+        assert.deepEqual((await ok('GET', endpoint, 'admin')).reports, []);
+        assert.equal((await request('POST', endpoint, 'examiner')).status, 409, 'open sessions block generation');
+        await ok('PATCH', '/api/sessions/' + session.id + '/sections/' + sectionId, 'examiner', { status: 'captured' });
+        await ok('PATCH', '/api/sessions/' + session.id, 'examiner', { status: 'completed' });
+        const first = (await ok('POST', endpoint, 'examiner')).report;
+        const second = (await ok('POST', endpoint, 'admin')).report;
+        assert.equal(first.versionNo, 1); assert.equal(second.versionNo, 2);
+        assert.equal(first.approvedBy, null); assert.ok(!('filePath' in first));
+        assert.deepEqual((await ok('GET', endpoint, 'admin')).reports.map(report => report.versionNo), [2, 1]);
+        if (!await prisma.caseAssignment.findUnique({ where: { caseId_userId: { caseId, userId: users.reviewer.id } } })) {
+          await ok('POST', '/api/cases/' + caseId + '/assignments', 'admin', { userId: users.reviewer.id });
+        }
+        const fileEndpoint = '/api/reports/' + first.id + '/file';
+        const fileResponse = await fetch(origin + fileEndpoint, { headers: { Authorization: 'Bearer ' + tokens.reviewer } });
+        assert.equal(fileResponse.status, 200);
+        const pdf = Buffer.from(await fileResponse.arrayBuffer());
+        assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+        assert.equal(createHash('sha256').update(pdf).digest('hex'), first.sha256Hash);
+        assert.equal((await request('POST', endpoint, 'reviewer')).status, 403);
+        assert.equal((await request('POST', '/api/reports/' + first.id + '/approve', 'examiner')).status, 403);
+        assert.equal((await request('POST', '/api/reports/' + second.id + '/approve', 'admin')).status, 403, 'authors cannot approve their own report');
+        const approved = (await ok('POST', '/api/reports/' + first.id + '/approve', 'reviewer')).report;
+        assert.equal(approved.approvedBy, users.reviewer.id); assert.ok(approved.approvedAt);
+        assert.equal(approved.sha256Hash, first.sha256Hash);
+        const approvedAgain = (await ok('POST', '/api/reports/' + first.id + '/approve', 'reviewer')).report;
+        assert.equal(approvedAgain.approvedAt, approved.approvedAt);
+        assert.equal((await request('POST', '/api/reports/' + first.id + '/approve', 'admin')).status, 409);
+        const print = await ok('POST', '/api/reports/' + first.id + '/print-requests', 'examiner');
+        assert.match(print.auditLogId, /^[1-9][0-9]*$/);
+        const event = await prisma.auditLog.findUnique({ where: { id: BigInt(print.auditLogId) } });
+        assert.equal(event.action, 'REPORT_PRINT_REQUESTED'); assert.equal(event.entityId, first.id);
+        const outsider = await prisma.user.create({ data: { email: 'report-outsider@example.test', fullName: 'Fictional Other Reviewer', role: 'reviewer', passwordHash } });
+        const token = jwt.sign({}, process.env.JWT_SECRET, { subject: String(outsider.id), expiresIn: '1h' });
+        const headers = { Authorization: 'Bearer ' + token };
+        assert.equal((await fetch(origin + endpoint, { headers })).status, 404);
+        assert.equal((await fetch(origin + fileEndpoint, { headers })).status, 404);
+        assert.equal((await fetch(origin + '/api/reports/' + first.id + '/approve', { method: 'POST', headers })).status, 404);
+        assert.equal((await fetch(origin + '/api/reports/' + first.id + '/print-requests', { method: 'POST', headers })).status, 404);
+        assert.equal((await fetch(origin + fileEndpoint)).status, 401);
+        const stored = await prisma.report.findUnique({ where: { id: first.id } });
+        const absolutePath = path.join(evidenceDir, stored.filePath);
+        fs.writeFileSync(absolutePath, 'tampered fictional PDF');
+        const corrupted = await request('GET', fileEndpoint, 'reviewer');
+        assert.equal(corrupted.status, 409); assert.match(corrupted.body.message, /integrity check/);
+        fs.writeFileSync(absolutePath, pdf);
+        fs.renameSync(absolutePath, absolutePath + '.backup');
+        assert.equal((await request('GET', fileEndpoint, 'reviewer')).status, 404);
+        fs.renameSync(absolutePath + '.backup', absolutePath);
+        assert.equal((await verify()).valid, true);
+      } finally {
+        if (oldEvidenceDir === undefined) delete process.env.EVIDENCE_DIR; else process.env.EVIDENCE_DIR = oldEvidenceDir;
+        fs.rmSync(evidenceDir, { recursive: true, force: true });
+      }
+    });
+
   } finally {
     if (server) await new Promise(resolve => server.close(resolve));
     await prisma.$disconnect();
