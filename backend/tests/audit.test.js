@@ -296,6 +296,89 @@ test('PostgreSQL audit trail and API', {
       assert.equal(result.status, 0, result.stderr);
       assert.doesNotMatch(result.stdout + result.stderr, /FAIL \(/);
     });
+
+    await t.test('local OCR, MongoDB persistence, search, failure/retry and authorization', {
+      skip: !process.env.TEST_MONGO_URI && 'Set TEST_MONGO_URI to test local OCR and MongoDB.',
+    }, async () => {
+      const mongoose = require('mongoose');
+      const fs = require('node:fs');
+      const dbName = 'ocr_test_' + randomUUID().replaceAll('-', '');
+      const evidenceDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ocr-evidence-'));
+      const oldEvidenceDir = process.env.EVIDENCE_DIR;
+      const oldExecutable = process.env.TESSERACT_PATH;
+      const ParsedArtifact = require('../src/models/parsed-artifact');
+      try {
+        await mongoose.connect(process.env.TEST_MONGO_URI, { dbName, serverSelectionTimeoutMS: 5000 });
+        await ParsedArtifact.init();
+        process.env.EVIDENCE_DIR = evidenceDir;
+        const bytes = fs.readFileSync(path.join(__dirname, 'fixtures/ocr-sample.png'));
+        const source = await prisma.captureSession.findUnique({ where: { id: sessionId } });
+        const session = (await ok('POST', '/api/panchnamas/' + panchnamaId + '/sessions', 'examiner', {
+          accountId: source.accountId, deviceType: 'macos', toolVersion: '1.0',
+        })).session;
+        const upload = await fetch(origin + '/api/sessions/' + session.id + '/screenshots?sectionId=' + sectionId + '&sequenceNo=1', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + tokens.examiner, 'Content-Type': 'image/png' }, body: bytes,
+        });
+        assert.equal(upload.status, 201);
+        const { screenshot } = await upload.json();
+        const endpoint = '/api/screenshots/' + screenshot.id;
+        const before = await request('GET', endpoint + '/parsed-artifact', 'examiner');
+        assert.equal(before.status, 404); assert.equal(before.body.parseStatus, 'pending');
+        const parsed = await ok('POST', endpoint + '/parse', 'examiner');
+        assert.equal(parsed.parseStatus, 'parsed');
+        assert.match(parsed.artifact.text, /TRAINING\s+EVIDENCE\s+12345/);
+        const stored = await ParsedArtifact.findOne({ screenshot_id: screenshot.id }).lean();
+        assert.equal(stored.status, 'parsed'); assert.equal(stored.data.sha256Hash, screenshot.sha256Hash);
+        assert.equal((await prisma.screenshot.findUnique({ where: { id: screenshot.id } })).parseStatus, 'parsed');
+        await ok('POST', '/api/cases/' + caseId + '/assignments', 'admin', { userId: users.reviewer.id });
+        const searchPath = '/api/cases/' + caseId + '/parsed-artifacts?q=EVIDENCE';
+        const matches = await ok('GET', searchPath, 'reviewer');
+        assert.equal(matches.artifacts.length, 1); assert.equal(matches.artifacts[0].screenshot_id, screenshot.id);
+        assert.equal((await ok('GET', endpoint + '/parsed-artifact', 'reviewer')).artifact.text, stored.text);
+        assert.equal((await request('POST', endpoint + '/parse', 'admin')).status, 403);
+        assert.equal((await request('POST', endpoint + '/parse', 'reviewer')).status, 403);
+        const outsider = await prisma.user.create({ data: { email: 'ocr-outsider@example.test', fullName: 'Fictional Outsider', role: 'examiner', passwordHash } });
+        const jwt = require('jsonwebtoken');
+        const outsiderToken = jwt.sign({}, process.env.JWT_SECRET, { subject: String(outsider.id), expiresIn: '1h' });
+        for (const target of [endpoint + '/parsed-artifact', searchPath]) {
+          assert.equal((await fetch(origin + target, { headers: { Authorization: 'Bearer ' + outsiderToken } })).status, 404);
+        }
+        await ok('POST', '/api/cases/' + caseId + '/assignments', 'admin', { userId: outsider.id });
+        assert.equal((await fetch(origin + endpoint + '/parse', { method: 'POST', headers: { Authorization: 'Bearer ' + outsiderToken } })).status, 404);
+        process.env.TESSERACT_PATH = path.join(evidenceDir, 'missing-tesseract');
+        const failed = await request('POST', endpoint + '/parse', 'examiner');
+        assert.equal(failed.status, 422); assert.equal(failed.body.parseStatus, 'failed');
+        assert.equal((await prisma.screenshot.findUnique({ where: { id: screenshot.id } })).parseStatus, 'failed');
+        assert.equal((await ok('GET', searchPath, 'reviewer')).artifacts.length, 0);
+        const hidden = await request('GET', endpoint + '/parsed-artifact', 'reviewer');
+        assert.equal(hidden.status, 404); assert.equal(hidden.body.parseStatus, 'failed');
+        if (oldExecutable === undefined) delete process.env.TESSERACT_PATH; else process.env.TESSERACT_PATH = oldExecutable;
+        assert.equal((await ok('POST', endpoint + '/parse', 'examiner')).parseStatus, 'parsed');
+        assert.equal(await ParsedArtifact.countDocuments({ screenshot_id: screenshot.id }), 1);
+        const metadata = await prisma.screenshot.findUnique({ where: { id: screenshot.id } });
+        const filePath = path.join(evidenceDir, metadata.filePath);
+        fs.writeFileSync(filePath, 'tampered fictional evidence');
+        const integrity = await request('POST', endpoint + '/parse', 'examiner');
+        assert.equal(integrity.status, 422); assert.match(integrity.body.message, /integrity check/);
+        assert.equal((await ok('GET', searchPath, 'reviewer')).artifacts.length, 0);
+        fs.writeFileSync(filePath, bytes);
+        assert.equal((await ok('POST', endpoint + '/parse', 'examiner')).parseStatus, 'parsed');
+        // A small local test executable makes overlapping requests deterministic.
+        const slow = path.join(evidenceDir, 'slow-ocr');
+        fs.writeFileSync(slow, '#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>setTimeout(()=>{process.stdout.write("TRAINING EVIDENCE 12345");},300));\n', { mode: 0o700 });
+        process.env.TESSERACT_PATH = slow;
+        const parallel = await Promise.all([request('POST', endpoint + '/parse', 'examiner'), request('POST', endpoint + '/parse', 'examiner')]);
+        assert.deepEqual(parallel.map(result => result.status).sort(), [200, 409]);
+        assert.equal((await verify()).valid, true);
+      } finally {
+        if (oldExecutable === undefined) delete process.env.TESSERACT_PATH; else process.env.TESSERACT_PATH = oldExecutable;
+        if (oldEvidenceDir === undefined) delete process.env.EVIDENCE_DIR; else process.env.EVIDENCE_DIR = oldEvidenceDir;
+        if (mongoose.connection.readyState === 1 && mongoose.connection.name === dbName) await mongoose.connection.dropDatabase();
+        await mongoose.disconnect();
+        fs.rmSync(evidenceDir, { recursive: true, force: true });
+      }
+    });
+
   } finally {
     if (server) await new Promise(resolve => server.close(resolve));
     await prisma.$disconnect();
