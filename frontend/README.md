@@ -191,6 +191,54 @@ hash. It is not evidence. Demo uploads are disabled.
 | `POST /api/sessions/:sessionId/screenshots?sectionId=…&sequenceNo=…&sourceUrl=…` | `{ screenshot: {...} }`; body is PNG bytes with `Content-Type: image/png` |
 | `GET /api/screenshots/:screenshotId/file` | Verified PNG bytes; integrity errors return HTTP 409 |
 
+## OCR and parsed evidence
+
+Install local Tesseract with English language data (`brew install tesseract` on
+macOS). The backend runs `tesseract stdin stdout -l eng`; no image is sent to a
+remote OCR service. Set backend `TESSERACT_PATH` only if the executable is not
+available on PATH, and restart the backend after installation/configuration.
+
+Open a screenshot preview and click **Extract text**. Only the panchnama's
+examiner can process its screenshots, including after the capture session ends.
+Authorized case users can read results. The backend checks file integrity, saves
+plain text and engine/hash metadata to MongoDB, and updates PostgreSQL parse status.
+Empty OCR text is a successful result when no readable words were found.
+
+Failed processing shows an error and **Retry OCR**. The same POST endpoint retries
+the screenshot; it updates the existing artifact rather than creating duplicates.
+**Refresh text** loads its latest status. **Run OCR again** replaces the derived
+text, leaving the original screenshot unchanged. OCR is manual, not automatically
+started on upload. Compare results with the image because OCR can be inaccurate.
+
+Use **Search extracted evidence** in case details to search parsed screenshots in
+that case. Search is literal and case-insensitive, and **Load more results** reads
+the next page. Pending/failed results are excluded from reads/search. Old artifacts
+without the new parsed status/hash metadata need to be reprocessed.
+
+The basic OCR runner handles up to two images at a time in one API process, with
+a 60-second command timeout and 4 MB text limit. Duplicate processing requests in
+that process return 409. This is not a distributed queue: use a single backend
+process for this version. Multiple backend instances need a shared job lock/queue.
+An interrupted process may leave an item pending; the owner can retry it after
+restart. PostgreSQL and MongoDB writes are separate, so partial failures are
+reported/retried rather than treated as one cross-database transaction.
+
+| Request | Response |
+| --- | --- |
+| `POST /api/screenshots/:screenshotId/parse` | `{ parseStatus: "parsed", artifact: {...} }`; failure returns 422 with `parseStatus: "failed"` |
+| `GET /api/screenshots/:screenshotId/parsed-artifact` | `{ parseStatus, artifact }`; no current parsed result returns 404 with `parseStatus` |
+| `GET /api/cases/:caseId/parsed-artifacts?q=…&after=…` | `{ artifacts: [{ screenshot_id, text }], nextCursor }`; up to 50 results |
+
+The demo remains read-only and has no real OCR results. For integration tests:
+
+```sh
+cd backend
+TEST_DATABASE_URL=postgresql://YOUR_POSTGRES_USER@127.0.0.1:5432/social_media_parser_dev TEST_MONGO_URI=mongodb://127.0.0.1:27017 npm test
+```
+
+Tests require Tesseract and create/remove their own PostgreSQL schema, MongoDB
+database, and temporary evidence files. They preserve application records.
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -216,6 +264,8 @@ hash. It is not evidence. Demo uploads are disabled.
 21. `Screenshots.jsx` loads the list and selects the preview.
 22. `UploadScreenshot.jsx` contains the PNG upload form; `useRef` clears the file input after success.
 23. `ScreenshotViewer.jsx` loads/verifies a file and displays/downloads it.
+24. `ParsedEvidence.jsx` displays OCR status/text and triggers extraction/retries.
+25. `EvidenceSearch.jsx` searches the current case's parsed text.
 
 ## Production build
 
@@ -231,4 +281,5 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing, OCR/parsed-evidence review and report screens remain to be built.
+Case editing and report screens remain to be built. OCR currently extracts English
+plain text; platform-specific structured parsing and automated capture remain pending.
