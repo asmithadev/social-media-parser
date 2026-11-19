@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getSession, getSessionSections, saveSectionOutcome, finishSession } from '../api';
 import SectionOutcome from './SectionOutcome';
+import Screenshots from './Screenshots';
 
 export default function SessionDetails({ token, sessionId, canManage, onUpdated }) {
   const [session, setSession] = useState(null);
@@ -59,6 +60,8 @@ export default function SessionDetails({ token, sessionId, canManage, onUpdated 
             <div><dt>Started</dt><dd>{new Date(session.startedAt).toLocaleString('en-IN')}</dd></div>
             <div><dt>Ended</dt><dd>{session.endedAt ? new Date(session.endedAt).toLocaleString('en-IN') : 'Not ended'}</dd></div>
           </dl>
+          <Screenshots token={token} sessionId={sessionId} sections={sections}
+            canUpload={canEdit} disabled={saving} onBusyChange={setSaving} />
           <h4>Capture sections</h4>
           {!sections.length && <p className="muted">No capture sections are configured for this platform.</p>}
           {sections.map(section => canEdit ? (
