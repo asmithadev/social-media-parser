@@ -3,7 +3,7 @@ import { getScreenshots, isDemoMode } from '../api';
 import UploadScreenshot from './UploadScreenshot';
 import ScreenshotViewer from './ScreenshotViewer';
 
-export default function Screenshots({ token, sessionId, sections, canUpload, disabled, onBusyChange }) {
+export default function Screenshots({ token, sessionId, sections, canUpload, canParse, disabled, onBusyChange }) {
   const [screenshots, setScreenshots] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,12 +41,15 @@ export default function Screenshots({ token, sessionId, sections, canUpload, dis
               <li key={screenshot.id}>
                 <strong>{sections.find(section => section.id === screenshot.platformSectionId)?.sectionName || `Section #${screenshot.platformSectionId}`} — sequence {screenshot.sequenceNo}</strong>
                 <p>Recorded: {new Date(screenshot.capturedAt).toLocaleString('en-IN')}</p>
+                <p>OCR: {screenshot.parseStatus}</p>
                 <p>SHA-256: <code className="file-hash">{screenshot.sha256Hash}</code></p>
                 <button className="secondary" disabled={disabled} onClick={() => setSelected(screenshot)}>View screenshot #{screenshot.id}</button>
               </li>
             ))}</ul>
           )}
-          {selected && <ScreenshotViewer key={selected.id} token={token} screenshot={selected} onClose={() => setSelected(null)} />}
+          {selected && <ScreenshotViewer key={selected.id} token={token} screenshot={selected} canParse={canParse}
+            onStatusChange={parseStatus => setScreenshots(records => records.map(record => record.id === selected.id ? { ...record, parseStatus } : record))}
+            onClose={() => setSelected(null)} />}
         </>
       )}
     </section>
