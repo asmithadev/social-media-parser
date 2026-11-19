@@ -1,6 +1,7 @@
 const express = require('express');
 const requireAuth = require('../middleware/require-auth');
 const controller = require('../controllers/session.controller');
+const { parseScreenshot } = require('../controllers/ocr.controller');
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.get('/screenshots/:screenshotId', requireAuth, controller.getScreenshot);
 router.get('/screenshots/:screenshotId/file', requireAuth, controller.downloadScreenshot);
 
 router.get('/screenshots/:screenshotId/parsed-artifact', requireAuth, controller.getParsedArtifact);
+router.post('/screenshots/:screenshotId/parse', requireAuth, parseScreenshot);
 
 router.get('/cases/:caseId/parsed-artifacts', requireAuth, controller.searchParsedArtifacts);
 
