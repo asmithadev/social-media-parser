@@ -3,6 +3,7 @@ import Login from './components/Login';
 import CaseList from './components/CaseList';
 import CaseDetails from './components/CaseDetails';
 import AdminPanel from './components/AdminPanel';
+import AuditLogs from './components/AuditLogs';
 import { isDemoMode, signIn } from './api';
 
 export default function App() {
@@ -44,12 +45,16 @@ export default function App() {
               onClick={() => { setPage('cases'); setSelectedCaseId(null); }}>Cases</button>
             <button className={page === 'admin' ? '' : 'secondary'} aria-current={page === 'admin' ? 'page' : undefined}
               onClick={() => setPage('admin')}>Admin tools</button>
+            <button className={page === 'audit' ? '' : 'secondary'} aria-current={page === 'audit' ? 'page' : undefined}
+              onClick={() => setPage('audit')}>Audit logs</button>
           </nav>
         )}
         {!session ? (
           <Login onLogin={handleLogin} />
         ) : page === 'admin' && session.user.role === 'admin' ? (
           <AdminPanel token={session.token} />
+        ) : page === 'audit' && session.user.role === 'admin' ? (
+          <AuditLogs token={session.token} />
         ) : selectedCaseId === null ? (
           <CaseList token={session.token} onSelectCase={setSelectedCaseId} />
         ) : (
