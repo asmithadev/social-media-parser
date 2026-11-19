@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getScreenshotFile } from '../api';
+import ParsedEvidence from './ParsedEvidence';
 
-export default function ScreenshotViewer({ token, screenshot, onClose }) {
+export default function ScreenshotViewer({ token, screenshot, onClose, canParse, onStatusChange }) {
   const [imageUrl, setImageUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,7 @@ export default function ScreenshotViewer({ token, screenshot, onClose }) {
             onError={() => setError('The file hash matched, but the image could not be displayed as a PNG.')} />
         </>
       )}
+      <ParsedEvidence token={token} screenshotId={screenshot.id} canParse={canParse} onStatusChange={onStatusChange} />
     </section>
   );
 }
