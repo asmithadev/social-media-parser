@@ -79,6 +79,8 @@ Session screens also support PNG upload, screenshot lists, hash/timestamp displa
 and verified previews/downloads with integrity errors shown to the user.
 Local English OCR with Tesseract saves text to MongoDB, supports retries, and
 provides case-scoped text search in the React app. Install `tesseract` before use.
+Panchnama screens list report versions and support PDF generation, verified
+downloads, reviewer approval, and audited print requests.
 Automated capture clients, platform-specific structured parsing, and the remaining
 frontend screens remain to be built.
 
