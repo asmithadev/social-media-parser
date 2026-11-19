@@ -3,13 +3,14 @@ import {
   demoSuspects, demoCaseSuspects, demoPlatforms, demoAccounts,
   demoPanchnamas, demoWitnesses,
   demoSessions, demoSessionSections,
+  demoScreenshots, demoScreenshotImage,
 } from './data/demo';
 
 export const isDemoMode = import.meta.env.VITE_USE_DEMO_DATA !== 'false';
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 // All real HTTP requests go through this small helper.
-async function request(endpoint, token, options = {}) {
+async function fetchResponse(endpoint, token, options = {}) {
   let response;
   try {
     response = await fetch(apiBaseUrl + endpoint, {
@@ -17,13 +18,22 @@ async function request(endpoint, token, options = {}) {
       headers: {
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
       },
     });
   } catch {
     throw new Error('Could not reach the server. Check that the backend is running.');
   }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || 'The request failed. Please try again.');
+  }
+  return response;
+}
+
+async function request(endpoint, token, options = {}) {
+  const response = await fetchResponse(endpoint, token, options);
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.message || 'The request failed. Please try again.');
   if (!data) throw new Error('The server returned an unexpected response.');
   return data;
 }
@@ -213,4 +223,38 @@ export async function saveSectionOutcome(token, sessionId, sectionId, fields) {
 export async function finishSession(token, sessionId, status) {
   const { session } = await sessionWrite(`/sessions/${sessionId}`, token, 'PATCH', { status });
   return session;
+}
+
+export async function getScreenshots(token, sessionId) {
+  if (isDemoMode) return demoScreenshots.filter(item => item.sessionId === Number(sessionId));
+  const { screenshots } = await request(`/sessions/${sessionId}/screenshots`, token);
+  return screenshots;
+}
+
+export async function uploadScreenshot(token, sessionId, fields, file) {
+  if (isDemoMode) throw new Error('Demo screenshots are read-only.');
+  if (!file || !file.size) throw new Error('Choose a PNG screenshot.');
+  if (file.size > 10 * 1024 * 1024) throw new Error('The PNG must be 10 MB or smaller.');
+  const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  if (signature.join(',') !== '137,80,78,71,13,10,26,10') throw new Error('Choose a valid PNG file.');
+  const query = new URLSearchParams({ sectionId: String(fields.sectionId), sequenceNo: String(fields.sequenceNo) });
+  if (fields.sourceUrl) query.set('sourceUrl', fields.sourceUrl);
+  // This endpoint accepts the PNG bytes directly, rather than FormData or JSON.
+  const { screenshot } = await request(`/sessions/${sessionId}/screenshots?${query}`, token, {
+    method: 'POST', headers: { 'Content-Type': 'image/png' }, body: file,
+  });
+  return screenshot;
+}
+
+export async function getScreenshotFile(token, screenshotId, expectedHash) {
+  const response = isDemoMode
+    ? await fetch(demoScreenshotImage)
+    : await fetchResponse(`/screenshots/${screenshotId}/file`, token, { cache: 'no-store' });
+  const blob = await response.blob();
+  // The backend checks the file; also compare downloaded bytes to the listed hash.
+  if (!globalThis.crypto?.subtle) throw new Error('Use HTTPS or localhost to verify screenshot integrity.');
+  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+  const actualHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  if (actualHash !== expectedHash) throw new Error('Screenshot integrity check failed. The file will not be displayed.');
+  return new Blob([blob], { type: 'image/png' });
 }
