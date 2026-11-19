@@ -164,6 +164,33 @@ frontend guard is not a substitute for those checks. Demo sessions are read-only
 | `PATCH /api/sessions/:sessionId/sections/:sectionId` with `{ status, reason }` | `{ outcome: {...} }` |
 | `PATCH /api/sessions/:sessionId` with `{ status: "completed" }` or `{ status: "failed" }` | `{ session: {...} }` |
 
+## Screenshots
+
+Choose a capture session in case details and use its **Screenshots** section.
+The panchnama's examiner can upload a PNG to an open session: choose a capture
+section, enter a positive sequence number, choose a PNG up to 10 MB, and optionally
+enter its source URL. Uploads use raw PNG bytes, not FormData. A sequence number
+must be unique within that session/section; a new upload never overwrites it.
+Uploading does not automatically change the section's captured/failed/skipped result.
+
+Authorized viewers can list screenshots, see the stored SHA-256 and recorded
+timestamp, and open a preview. The timestamp is when the backend registered the
+upload, not a verified original camera/platform capture time. File requests use
+the Bearer token and bypass browser caching. The backend verifies integrity and
+the browser also compares downloaded bytes against the listed hash before showing
+the image or enabling download. Failed integrity checks, missing files and access
+errors are displayed. Previews release their object URLs when closed. Hashes are
+checked on loading, not continuously; close/reopen or refresh to check again.
+
+The demo contains an explicitly labelled 1 × 1 PNG placeholder with a matching
+hash. It is not evidence. Demo uploads are disabled.
+
+| Request | Response |
+| --- | --- |
+| `GET /api/sessions/:sessionId/screenshots` | `{ screenshots: [...] }` without private file paths |
+| `POST /api/sessions/:sessionId/screenshots?sectionId=…&sequenceNo=…&sourceUrl=…` | `{ screenshot: {...} }`; body is PNG bytes with `Content-Type: image/png` |
+| `GET /api/screenshots/:screenshotId/file` | Verified PNG bytes; integrity errors return HTTP 409 |
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -186,6 +213,9 @@ frontend guard is not a substitute for those checks. Demo sessions are read-only
 18. `StartSession.jsx` loads case accounts and starts a session.
 19. `SessionDetails.jsx` loads sections and handles saving/ending.
 20. `SectionOutcome.jsx` is the simple result/reason form for one section.
+21. `Screenshots.jsx` loads the list and selects the preview.
+22. `UploadScreenshot.jsx` contains the PNG upload form; `useRef` clears the file input after success.
+23. `ScreenshotViewer.jsx` loads/verifies a file and displays/downloads it.
 
 ## Production build
 
@@ -201,4 +231,4 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing, screenshot upload/viewing, evidence review and report screens remain to be built.
+Case editing, OCR/parsed-evidence review and report screens remain to be built.
