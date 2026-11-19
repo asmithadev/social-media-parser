@@ -81,6 +81,7 @@ Local English OCR with Tesseract saves text to MongoDB, supports retries, and
 provides case-scoped text search in the React app. Install `tesseract` before use.
 Panchnama screens list report versions and support PDF generation, verified
 downloads, reviewer approval, and audited print requests.
+An admin-only audit page lists entries and verifies the stored hash chain.
 Automated capture clients, platform-specific structured parsing, and the remaining
 frontend screens remain to be built.
 
