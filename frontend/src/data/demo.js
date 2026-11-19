@@ -73,3 +73,11 @@ export const demoSessionSections = [
   { sessionId: 51, id: 61, sectionName: 'account_info', status: 'captured', reason: null },
   { sessionId: 51, id: 62, sectionName: 'posts', status: 'pending', reason: null },
 ];
+
+// A generated 1 x 1 blue PNG placeholder, not actual evidence.
+export const demoScreenshotImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNQTX4NAAIkAXSaGkHUAAAAAElFTkSuQmCC';
+export const demoScreenshots = [{
+  id: 71, sessionId: 51, platformSectionId: 61, sequenceNo: 1,
+  sha256Hash: '5f16b81ef33df923036559bd48bd22b3fe17e215e31297338fd6253c5db6d30e',
+  capturedAt: '2026-11-19T05:01:00Z', parseStatus: 'pending', sourceUrl: null,
+}];
