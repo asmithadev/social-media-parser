@@ -322,3 +322,13 @@ export async function getReportFile(token, reportId, expectedHash) {
   if (new TextDecoder().decode(bytes.slice(0, 5)) !== '%PDF-') throw new Error('The server did not return a valid PDF file.');
   return new Blob([bytes], { type: 'application/pdf' });
 }
+
+export function getAuditLogs(token, after = null) {
+  const params = new URLSearchParams({ limit: '50' });
+  if (after) params.set('after', after);
+  return adminRequest(`/audit-logs?${params}`, token);
+}
+
+export function verifyAuditChain(token) {
+  return adminRequest('/audit-logs/verify', token);
+}
