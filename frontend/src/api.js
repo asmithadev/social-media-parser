@@ -285,3 +285,40 @@ export function searchEvidence(token, caseId, query, after = null) {
   if (after) params.set('after', String(after));
   return request(`/cases/${caseId}/parsed-artifacts?${params}`, token);
 }
+
+export async function getReports(token, panchnamaId) {
+  if (isDemoMode) return [];
+  const { reports } = await request(`/panchnamas/${panchnamaId}/reports`, token);
+  return reports;
+}
+
+function reportWrite(endpoint, token) {
+  if (isDemoMode) throw new Error('Demo reports are read-only.');
+  return request(endpoint, token, { method: 'POST' });
+}
+
+export async function generateReport(token, panchnamaId) {
+  const { report } = await reportWrite(`/panchnamas/${panchnamaId}/reports`, token);
+  return report;
+}
+
+export async function approveReport(token, reportId) {
+  const { report } = await reportWrite(`/reports/${reportId}/approve`, token);
+  return report;
+}
+
+export function recordPrintRequest(token, reportId) {
+  return reportWrite(`/reports/${reportId}/print-requests`, token);
+}
+
+export async function getReportFile(token, reportId, expectedHash) {
+  if (isDemoMode) throw new Error('No PDF is available in demo mode.');
+  const response = await fetchResponse(`/reports/${reportId}/file`, token, { cache: 'no-store' });
+  const bytes = await response.arrayBuffer();
+  if (!globalThis.crypto?.subtle) throw new Error('Use HTTPS or localhost to verify PDF integrity.');
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  if (hash !== expectedHash) throw new Error('Report integrity check failed. The PDF will not be downloaded.');
+  if (new TextDecoder().decode(bytes.slice(0, 5)) !== '%PDF-') throw new Error('The server did not return a valid PDF file.');
+  return new Blob([bytes], { type: 'application/pdf' });
+}
