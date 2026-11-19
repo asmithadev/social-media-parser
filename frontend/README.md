@@ -134,6 +134,36 @@ These existing API contracts are used:
 | `GET /api/panchnamas/:panchnamaId/witnesses` | `{ witnesses: [{ id, fullName }] }` |
 | `POST /api/panchnamas/:panchnamaId/witnesses` with `{ fullName, contactNo }` | `{ witness: { id, fullName } }` |
 
+## Capture sessions
+
+In case details, choose a panchnama and scroll to **Capture sessions**.
+Its creating examiner can choose a registered social account from the case,
+select macOS/iOS, enter the capture tool version and an optional device label,
+and click **Start session**. Register the suspect/account first if the account
+list is empty; **Refresh case accounts** reloads the dropdown.
+
+Select a session to see its status, device, timestamps, and platform sections.
+For each section choose captured, failed, or skipped, provide a reason for
+failed/skipped outcomes, and save. All authorized users can view these results;
+only the panchnama's examiner can edit its open sessions. Ended sessions are
+read-only. **Refresh session** loads the latest state after a conflict/error.
+
+**Complete session** is disabled in this UI until all sections have a saved
+outcome and at least one section exists. **End as failed** can end an unfinished
+session. These are manual progress controls; they do not automate capture or
+upload files. A captured outcome does not verify that a screenshot exists.
+The existing backend still needs its own completeness/evidence checks; the
+frontend guard is not a substitute for those checks. Demo sessions are read-only.
+
+| Request | Response |
+| --- | --- |
+| `GET /api/panchnamas/:panchnamaId/sessions` | `{ sessions: [...] }` |
+| `POST /api/panchnamas/:panchnamaId/sessions` with `{ accountId, deviceType, deviceLabel, toolVersion }` | `{ session: {...} }` |
+| `GET /api/sessions/:sessionId` | `{ session: {...} }` |
+| `GET /api/sessions/:sessionId/sections` | `{ sections: [{ id, sectionName, status, reason, ... }] }` |
+| `PATCH /api/sessions/:sessionId/sections/:sectionId` with `{ status, reason }` | `{ outcome: {...} }` |
+| `PATCH /api/sessions/:sessionId` with `{ status: "completed" }` or `{ status: "failed" }` | `{ session: {...} }` |
+
 ## Read the code
 
 1. `src/main.jsx` mounts React and loads CSS.
@@ -152,6 +182,10 @@ These existing API contracts are used:
 14. `Panchnamas.jsx` loads/selects panchnamas and applies role/ownership rules.
 15. `CreatePanchnama.jsx` handles one creation form.
 16. `Witnesses.jsx` loads witness names and has the witness form.
+17. `CaptureSessions.jsx` lists/selects sessions for a panchnama.
+18. `StartSession.jsx` loads case accounts and starts a session.
+19. `SessionDetails.jsx` loads sections and handles saving/ending.
+20. `SectionOutcome.jsx` is the simple result/reason form for one section.
 
 ## Production build
 
@@ -167,4 +201,4 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing, capture sessions, evidence review and report screens remain to be built.
+Case editing, screenshot upload/viewing, evidence review and report screens remain to be built.

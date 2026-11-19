@@ -2,6 +2,7 @@ import {
   demoCases, demoCredentials, demoUser,
   demoSuspects, demoCaseSuspects, demoPlatforms, demoAccounts,
   demoPanchnamas, demoWitnesses,
+  demoSessions, demoSessionSections,
 } from './data/demo';
 
 export const isDemoMode = import.meta.env.VITE_USE_DEMO_DATA !== 'false';
@@ -159,4 +160,57 @@ export async function addWitness(token, panchnamaId, fields) {
     method: 'POST', body: JSON.stringify(fields),
   });
   return witness;
+}
+
+// Collect accounts belonging to suspects linked to this case for the dropdown.
+export async function getCaseAccounts(token, caseId) {
+  const [links, platforms] = await Promise.all([getCaseSuspects(token, caseId), getPlatforms(token)]);
+  const groups = await Promise.all(links.map(async link => {
+    const accounts = await getAccounts(token, link.suspectId);
+    return accounts.map(account => ({ ...account, suspectName: link.suspect.fullName,
+      platformName: platforms.find(platform => platform.id === account.platformId)?.name || `Platform #${account.platformId}` }));
+  }));
+  return groups.flat();
+}
+
+export async function getSessions(token, panchnamaId) {
+  if (isDemoMode) return demoSessions.filter(session => session.panchnamaId === Number(panchnamaId));
+  const { sessions } = await request(`/panchnamas/${panchnamaId}/sessions`, token);
+  return sessions;
+}
+
+export async function getSession(token, sessionId) {
+  if (isDemoMode) {
+    const session = demoSessions.find(session => session.id === Number(sessionId));
+    if (!session) throw new Error('Session not found.');
+    return session;
+  }
+  const { session } = await request(`/sessions/${sessionId}`, token);
+  return session;
+}
+
+export async function getSessionSections(token, sessionId) {
+  if (isDemoMode) return demoSessionSections.filter(section => section.sessionId === Number(sessionId));
+  const { sections } = await request(`/sessions/${sessionId}/sections`, token);
+  return sections;
+}
+
+function sessionWrite(endpoint, token, method, fields) {
+  if (isDemoMode) throw new Error('Demo capture sessions are read-only.');
+  return request(endpoint, token, { method, body: JSON.stringify(fields) });
+}
+
+export async function startSession(token, panchnamaId, fields) {
+  const { session } = await sessionWrite(`/panchnamas/${panchnamaId}/sessions`, token, 'POST', fields);
+  return session;
+}
+
+export async function saveSectionOutcome(token, sessionId, sectionId, fields) {
+  const { outcome } = await sessionWrite(`/sessions/${sessionId}/sections/${sectionId}`, token, 'PATCH', fields);
+  return outcome;
+}
+
+export async function finishSession(token, sessionId, status) {
+  const { session } = await sessionWrite(`/sessions/${sessionId}`, token, 'PATCH', { status });
+  return session;
 }

@@ -64,3 +64,12 @@ export const demoPanchnamas = [
 export const demoWitnesses = [
   { id: 41, panchnamaId: 31, fullName: 'Fictional Training Witness' },
 ];
+
+export const demoSessions = [
+  { id: 51, panchnamaId: 31, accountId: 21, deviceType: 'macos', deviceLabel: 'Training Mac', toolVersion: '1.0', status: 'open', startedAt: '2026-11-19T05:00:00Z', endedAt: null },
+];
+
+export const demoSessionSections = [
+  { sessionId: 51, id: 61, sectionName: 'account_info', status: 'captured', reason: null },
+  { sessionId: 51, id: 62, sectionName: 'posts', status: 'pending', reason: null },
+];

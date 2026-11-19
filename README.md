@@ -73,6 +73,8 @@ users to cases through simple admin forms. Case details include suspect linking
 and social-account registration for admins, with viewing for assigned users.
 Assigned examiners can create panchnamas and add witnesses to their own panchnamas;
 other authorized users can view them.
+The panchnama's examiner can also start/end capture sessions and record section
+outcomes through basic forms; authorized users can view progress.
 Automated capture clients, OCR
 ingestion, and the remaining frontend screens
 remain to be built.
