@@ -108,6 +108,13 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .section-outcome { padding: 16px; border: 1px solid #e2e8f0; border-radius: 6px; }
 .section-outcome legend { margin-bottom: 12px; font-weight: 600; overflow-wrap: anywhere; }
 .session-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.screenshots { margin-top: 24px; padding: 16px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+.screenshot-list { padding: 0; list-style: none; }
+.screenshot-list li { padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
+.screenshot-list p { margin: 6px 0; }
+.file-hash { overflow-wrap: anywhere; }
+.screenshot-viewer { margin-top: 20px; padding: 16px; border: 1px solid #cbd5e1; border-radius: 6px; }
+.screenshot-image { display: block; max-width: 100%; height: auto; margin-top: 16px; }
 @media (max-width: 600px) {
   .header-content { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
   .account-menu { width: 100%; justify-content: space-between; font-size: 14px; }
