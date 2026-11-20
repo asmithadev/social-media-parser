@@ -82,21 +82,42 @@ async function finishSession(req, res) {
   }
   const input = readInput(req, res, ['sessionId'], finishSchema);
   if (!input) return;
-  const where = { id: input.sessionId, panchnama: { examinerId: req.user.id } };
-  const session = await prisma.captureSession.findFirst({ where });
-  if (!session) return res.status(404).json({ message: 'Session not found.' });
-  if (session.status === input.data.status) return res.json({ session });
+  const result = await withAuditActor(req.user.id, async tx => {
+    const session = await tx.captureSession.findFirst({
+      where: { id: input.sessionId, panchnama: { examinerId: req.user.id } },
+    });
+    if (!session) return { status: 404, message: 'Session not found.' };
+    if (session.status === input.data.status) return { session };
+    if (session.status !== 'open') return { status: 409, message: 'Session has already ended.' };
 
-  const [updated] = await withAuditActor(req.user.id, tx => tx.captureSession.updateManyAndReturn({
-    where: { ...where, status: 'open' },
-    data: { status: input.data.status, endedAt: new Date(Math.max(Date.now(), session.startedAt.getTime())) },
-  }));
-  if (updated) return res.json({ session: updated });
+    // Check and finish inside the same audited transaction, so section updates
+    // and screenshot uploads cannot race with completion.
+    if (input.data.status === 'completed') {
+      const account = await tx.socialAccount.findUnique({
+        where: { id: session.accountId },
+        select: { platform: { select: { sections: { select: { id: true } } } } },
+      });
+      const sections = account.platform.sections;
+      const outcomes = await tx.captureSectionOutcome.findMany({ where: { sessionId: session.id } });
+      if (!sections.length || sections.some(section => !outcomes.some(outcome => outcome.platformSectionId === section.id))) {
+        return { status: 409, message: 'Save a result for every capture section before completing the session.' };
+      }
+      const screenshots = await tx.screenshot.findMany({
+        where: { sessionId: session.id }, select: { platformSectionId: true },
+      });
+      if (outcomes.some(outcome => outcome.status === 'captured' &&
+          !screenshots.some(screenshot => screenshot.platformSectionId === outcome.platformSectionId))) {
+        return { status: 409, message: 'Upload a screenshot for every section marked captured before completing the session.' };
+      }
+    }
 
-  const current = await prisma.captureSession.findFirst({ where });
-  if (!current) return res.status(404).json({ message: 'Session not found.' });
-  if (current.status === input.data.status) return res.json({ session: current });
-  return res.status(409).json({ message: 'Session has already ended.' });
+    return { session: await tx.captureSession.update({
+      where: { id: session.id },
+      data: { status: input.data.status, endedAt: new Date(Math.max(Date.now(), session.startedAt.getTime())) },
+    }) };
+  });
+  if (!result.session) return res.status(result.status).json({ message: result.message });
+  return res.json(result);
 }
 
 
@@ -158,6 +179,10 @@ async function setSectionOutcome(req, res) {
     if (!section) return { status: 404, message: 'Section not found for this platform.' };
 
     const key = { sessionId, platformSectionId: sectionId };
+    if (data.status === 'captured') {
+      const screenshot = await tx.screenshot.findFirst({ where: key, select: { id: true } });
+      if (!screenshot) return { status: 409, message: 'Upload a screenshot for this section before marking it captured.' };
+    }
     const outcome = { status: data.status, reason: data.reason ?? null };
     return { outcome: await tx.captureSectionOutcome.upsert({
       where: { sessionId_platformSectionId: key },
