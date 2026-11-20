@@ -150,10 +150,13 @@ read-only. **Refresh session** loads the latest state after a conflict/error.
 
 **Complete session** is disabled in this UI until all sections have a saved
 outcome and at least one section exists. **End as failed** can end an unfinished
-session. These are manual progress controls; they do not automate capture or
-upload files. A captured outcome does not verify that a screenshot exists.
-The existing backend still needs its own completeness/evidence checks; the
-frontend guard is not a substitute for those checks. Demo sessions are read-only.
+session. The backend also rejects completion until every configured section has
+a saved outcome and at least one section exists. Upload a screenshot for a section
+before marking it captured; the backend checks for that section's screenshot
+both when saving the outcome and when completing the session. These checks use
+stored screenshot records; opening/downloading evidence still verifies file hashes.
+These are manual progress controls; they do not automate capture or upload files.
+Demo sessions are read-only.
 
 | Request | Response |
 | --- | --- |
@@ -259,7 +262,8 @@ An approval updates metadata; it does not rewrite the PDF or its hash.
 For approved versions, **Record print request** adds an audit event. It does not
 operate a printer or prove that printing happened; open/download the PDF to use
 the browser/PDF viewer's print command. This UI only shows that button for approved
-reports, although the existing print-request API itself does not enforce approval.
+reports. The backend also rejects print requests for unapproved reports with HTTP
+409 and does not record a successful print-request audit event for the rejection.
 Draft PDFs can still be downloaded for review. The demo shows an empty report list
 and does not generate real PDFs.
 
