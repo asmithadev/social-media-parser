@@ -75,12 +75,16 @@ Assigned examiners can create panchnamas and add witnesses to their own panchnam
 other authorized users can view them.
 The panchnama's examiner can also start/end capture sessions and record section
 outcomes through basic forms; authorized users can view progress.
+The backend rejects completion while any section is pending and requires an
+uploaded screenshot for each section marked captured. Failed sessions can still
+be ended with unfinished sections.
 Session screens also support PNG upload, screenshot lists, hash/timestamp display,
 and verified previews/downloads with integrity errors shown to the user.
 Local English OCR with Tesseract saves text to MongoDB, supports retries, and
 provides case-scoped text search in the React app. Install `tesseract` before use.
 Panchnama screens list report versions and support PDF generation, verified
 downloads, reviewer approval, and audited print requests.
+Print requests require an approved report.
 An admin-only audit page lists entries and verifies the stored hash chain.
 Automated capture clients, platform-specific structured parsing, and the remaining
 frontend screens remain to be built.
