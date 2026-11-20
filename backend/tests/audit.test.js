@@ -421,6 +421,10 @@ test('PostgreSQL audit trail and API', {
         assert.equal((await request('POST', endpoint, 'reviewer')).status, 403);
         assert.equal((await request('POST', '/api/reports/' + first.id + '/approve', 'examiner')).status, 403);
         assert.equal((await request('POST', '/api/reports/' + second.id + '/approve', 'admin')).status, 403, 'authors cannot approve their own report');
+        const printCount = await prisma.auditLog.count({ where: { action: 'REPORT_PRINT_REQUESTED', entityId: first.id } });
+        const draftPrint = await request('POST', '/api/reports/' + first.id + '/print-requests', 'examiner');
+        assert.equal(draftPrint.status, 409); assert.match(draftPrint.body.message, /Approve this report/);
+        assert.equal(await prisma.auditLog.count({ where: { action: 'REPORT_PRINT_REQUESTED', entityId: first.id } }), printCount);
         const approved = (await ok('POST', '/api/reports/' + first.id + '/approve', 'reviewer')).report;
         assert.equal(approved.approvedBy, users.reviewer.id); assert.ok(approved.approvedAt);
         assert.equal(approved.sha256Hash, first.sha256Hash);
@@ -448,6 +452,89 @@ test('PostgreSQL audit trail and API', {
         fs.renameSync(absolutePath, absolutePath + '.backup');
         assert.equal((await request('GET', fileEndpoint, 'reviewer')).status, 404);
         fs.renameSync(absolutePath + '.backup', absolutePath);
+        assert.equal((await verify()).valid, true);
+      } finally {
+        if (oldEvidenceDir === undefined) delete process.env.EVIDENCE_DIR; else process.env.EVIDENCE_DIR = oldEvidenceDir;
+        fs.rmSync(evidenceDir, { recursive: true, force: true });
+      }
+    });
+
+
+    await t.test('session workflow checks: pending sections, section-specific screenshots and failure paths', async () => {
+      const fs = require('node:fs');
+      const evidenceDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'workflow-evidence-'));
+      const oldEvidenceDir = process.env.EVIDENCE_DIR;
+      process.env.EVIDENCE_DIR = evidenceDir;
+      try {
+        const source = await prisma.captureSession.findUnique({ where: { id: sessionId }, include: { account: true } });
+        const platform = await withAuditActor(users.admin.id, tx => tx.platform.create({
+          data: { name: 'workflow_fixture', sections: { create: [{ sectionName: 'posts' }, { sectionName: 'messages' }] } },
+          include: { sections: { orderBy: { id: 'asc' } } },
+        }));
+        const account = (await ok('POST', '/api/suspects/' + source.account.suspectId + '/accounts', 'admin', {
+          platformId: platform.id, handle: 'fictional_workflow_account',
+        })).account;
+        async function start(accountId = account.id) {
+          return (await ok('POST', '/api/panchnamas/' + panchnamaId + '/sessions', 'examiner', {
+            accountId, deviceType: 'macos', toolVersion: '1.0',
+          })).session;
+        }
+        const [posts, messages] = platform.sections;
+        const bytes = fs.readFileSync(path.join(__dirname, 'fixtures/ocr-sample.png'));
+        async function upload(session, section) {
+          const response = await fetch(origin + '/api/sessions/' + session.id + '/screenshots?sectionId=' + section.id + '&sequenceNo=1', {
+            method: 'POST', headers: { Authorization: 'Bearer ' + tokens.examiner, 'Content-Type': 'image/png' }, body: bytes,
+          });
+          assert.equal(response.status, 201);
+        }
+        const session = await start();
+        const endpoint = '/api/sessions/' + session.id;
+        const baseline = await prisma.auditLog.count();
+        assert.equal((await request('PATCH', endpoint, 'examiner', { status: 'completed' })).status, 409);
+        const noImage = await request('PATCH', endpoint + '/sections/' + posts.id, 'examiner', { status: 'captured' });
+        assert.equal(noImage.status, 409); assert.match(noImage.body.message, /Upload a screenshot/);
+        assert.equal(await prisma.captureSectionOutcome.count({ where: { sessionId: session.id } }), 0);
+        assert.equal(await prisma.auditLog.count(), baseline, 'rejections must not create successful mutation events');
+        assert.equal((await ok('GET', endpoint, 'examiner')).session.endedAt, null);
+        await upload(session, posts);
+        assert.equal((await request('PATCH', endpoint, 'examiner', { status: 'completed' })).status, 409, 'a screenshot alone does not save a section outcome');
+        await ok('PATCH', endpoint + '/sections/' + posts.id, 'examiner', { status: 'captured' });
+        assert.equal((await request('PATCH', endpoint, 'examiner', { status: 'completed' })).status, 409, 'the second section is still pending');
+        assert.equal((await request('PATCH', endpoint + '/sections/' + messages.id, 'examiner', { status: 'captured' })).status, 409, 'a screenshot from another section does not count');
+        assert.equal((await request('PATCH', endpoint + '/sections/' + messages.id, 'examiner', { status: 'skipped', reason: ' ' })).status, 400);
+        await ok('PATCH', endpoint + '/sections/' + messages.id, 'examiner', { status: 'skipped', reason: 'Fictional unavailable section' });
+        const completed = (await ok('PATCH', endpoint, 'examiner', { status: 'completed' })).session;
+        assert.ok(completed.endedAt); assert.equal(completed.status, 'completed');
+        const beforeRepeat = await prisma.auditLog.count();
+        await ok('PATCH', endpoint, 'examiner', { status: 'completed' });
+        assert.equal(await prisma.auditLog.count(), beforeRepeat);
+        assert.equal((await request('PATCH', endpoint + '/sections/' + posts.id, 'examiner', { status: 'skipped', reason: 'Late' })).status, 409);
+        const failed = await start();
+        assert.equal((await ok('PATCH', '/api/sessions/' + failed.id, 'examiner', { status: 'failed' })).session.status, 'failed', 'failed sessions may retain pending sections');
+        const legacy = await start();
+        await withAuditActor(users.examiner.id, tx => tx.captureSectionOutcome.createMany({ data: [
+          { sessionId: legacy.id, platformSectionId: posts.id, status: 'captured' },
+          { sessionId: legacy.id, platformSectionId: messages.id, status: 'skipped', reason: 'Fictional reason' },
+        ] }));
+        const legacyResult = await request('PATCH', '/api/sessions/' + legacy.id, 'examiner', { status: 'completed' });
+        assert.equal(legacyResult.status, 409); assert.match(legacyResult.body.message, /screenshot for every section/);
+        await upload(legacy, posts);
+        await ok('PATCH', '/api/sessions/' + legacy.id, 'examiner', { status: 'completed' });
+        const race = await start();
+        const racePath = '/api/sessions/' + race.id;
+        const attempts = await Promise.all([
+          request('PATCH', racePath, 'examiner', { status: 'completed' }),
+          request('PATCH', racePath + '/sections/' + posts.id, 'examiner', { status: 'skipped', reason: 'Fictional race fixture' }),
+          request('PATCH', racePath + '/sections/' + messages.id, 'examiner', { status: 'failed', reason: 'Fictional race fixture' }),
+        ]);
+        assert.ok([200, 409].includes(attempts[0].status));
+        assert.equal(attempts[1].status, 200); assert.equal(attempts[2].status, 200);
+        assert.equal(await prisma.captureSectionOutcome.count({ where: { sessionId: race.id } }), 2);
+        await ok('PATCH', racePath, 'examiner', { status: 'completed' });
+        const emptyPlatform = await withAuditActor(users.admin.id, tx => tx.platform.create({ data: { name: 'workflow_empty_fixture' } }));
+        const emptyAccount = (await ok('POST', '/api/suspects/' + source.account.suspectId + '/accounts', 'admin', { platformId: emptyPlatform.id, handle: 'no_sections' })).account;
+        const empty = await start(emptyAccount.id);
+        assert.equal((await request('PATCH', '/api/sessions/' + empty.id, 'examiner', { status: 'completed' })).status, 409);
         assert.equal((await verify()).valid, true);
       } finally {
         if (oldEvidenceDir === undefined) delete process.env.EVIDENCE_DIR; else process.env.EVIDENCE_DIR = oldEvidenceDir;
