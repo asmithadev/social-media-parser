@@ -144,13 +144,16 @@ exports.approveReport = approveReport;
 async function requestPrint(req, res) {
   const input = readInput(req, res, ['reportId']);
   if (!input) return;
-  const event = await withAuditActor(req.user.id, async tx => {
+  const result = await withAuditActor(req.user.id, async tx => {
     const report = await tx.report.findFirst({
       where: { id: input.reportId, panchnama: panchnamaScope(req.user) },
-      select: { id: true },
+      select: { id: true, approvedBy: true, approvedAt: true },
     });
-    if (!report) return null;
-    return tx.auditLog.create({
+    if (!report) return { status: 404, message: 'Report not found.' };
+    if (!report.approvedBy || !report.approvedAt) {
+      return { status: 409, message: 'Approve this report before requesting a print.' };
+    }
+    const event = await tx.auditLog.create({
       data: {
         userId: req.user.id,
         action: 'REPORT_PRINT_REQUESTED',
@@ -159,9 +162,10 @@ async function requestPrint(req, res) {
         chainHash: '0'.repeat(64),
       },
     });
+    return { event };
   });
-  if (!event) return res.status(404).json({ message: 'Report not found.' });
-  return res.status(201).json({ auditLogId: String(event.id) });
+  if (!result.event) return res.status(result.status).json({ message: result.message });
+  return res.status(201).json({ auditLogId: String(result.event.id) });
 }
 
 exports.requestPrint = requestPrint;
