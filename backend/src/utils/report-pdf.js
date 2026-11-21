@@ -2,7 +2,8 @@ const { PDFDocument } = require('pdfkit');
 const { buffer } = require('node:stream/consumers');
 const readEvidence = require('./evidence-file');
 
-async function renderReport(record, versionNo) {
+async function renderReport(record, versionNo, artifacts = []) {
+  const textByScreenshot = new Map(artifacts.map(artifact => [artifact.screenshot_id, artifact]));
   const pdf = new PDFDocument({ size: 'A4', margin: 48 });
   const output = buffer(pdf);
   try {
@@ -51,6 +52,23 @@ async function renderReport(record, versionNo) {
           pdf.end();
           await output;
           return { status: 409, message: 'Screenshot ' + screenshot.id + ' could not be rendered.' };
+        }
+
+        // A separate page leaves room for the image. PDFKit wraps long OCR text
+        // and adds continuation pages automatically.
+        pdf.addPage();
+        pdf.fontSize(16).text('Extracted text - Screenshot ' + screenshot.id);
+        pdf.moveDown().fontSize(10).text('OCR output may contain mistakes. Review it against the source screenshot.');
+        pdf.moveDown();
+        const artifact = textByScreenshot.get(screenshot.id);
+        if (screenshot.parseStatus === 'failed') {
+          pdf.text('OCR failed. Retry processing and generate a new report to include extracted text.');
+        } else if (screenshot.parseStatus !== 'parsed') {
+          pdf.text('OCR is pending or has not been run.');
+        } else if (!artifact || artifact.status !== 'parsed' || artifact.data?.sha256Hash !== screenshot.sha256Hash) {
+          pdf.text('OCR text is unavailable or does not match this screenshot. Retry processing before generating a new report.');
+        } else {
+          pdf.text(artifact.text?.trim() ? artifact.text : 'OCR completed. No text was detected.', { lineGap: 3 });
         }
       }
     }
