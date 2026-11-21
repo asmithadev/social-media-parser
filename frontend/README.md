@@ -77,6 +77,18 @@ assignments are listed below the form, and already-assigned users are excluded
 from the user dropdown. Only active examiners and reviewers can be assigned.
 Click **Cases** to see newly created cases in the regular list.
 
+To edit a case, open **Cases → View case → Edit case** as an administrator.
+The form starts with the current case number, title, description and open/closed
+status. Click **Save changes** to update the details, or **Cancel** to discard
+unsaved edits. Saving disables the form; errors stay beside it so you can correct
+the fields and retry. A successful save updates the displayed details immediately.
+Returning to the case list loads the latest values from the backend.
+
+The form uses `PATCH /api/cases/:caseId` with
+`{ caseNumber, title, description, status }` and reads `{ case: {...} }` from the
+response. Express enforces administrator access, validates the fields and records
+the change in the audit trail. Demo cases remain read-only.
+
 An examiner/reviewer who signs in sees their assigned cases. Admin navigation is
 hidden for those roles, and Express also rejects unauthorized admin mutations.
 The fictional demo account remains an examiner and uses the original demo screens.
@@ -337,6 +349,7 @@ does not yet submit checkpoints or store them automatically.
 27. `ReportDownload.jsx` verifies PDF bytes and prepares private download links.
 28. `AuditLogs.jsx` loads and paginates audit entries.
 29. `AuditVerification.jsx` verifies the chain and displays the result.
+30. `EditCase.jsx` edits case details using a basic form and the existing PATCH API.
 
 ## Production build
 
@@ -352,5 +365,5 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-Case editing remains to be built. OCR currently extracts English
-plain text; platform-specific structured parsing and automated capture remain pending.
+OCR currently extracts English plain text; platform-specific structured parsing
+and automated capture remain pending.
