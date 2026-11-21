@@ -372,4 +372,6 @@ proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
 OCR currently extracts English plain text; platform-specific structured parsing
-and automated capture remain pending.
+remains pending. The [basic macOS client](../capture-macos/README.md) can capture
+and upload the visible browser page after manual platform sign-in and navigation.
+Automatic platform navigation and iOS capture remain pending.
