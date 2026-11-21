@@ -82,6 +82,13 @@ export async function createCase(token, fields) {
   return data.case;
 }
 
+export async function updateCase(token, caseId, fields) {
+  const data = await adminRequest(`/cases/${caseId}`, token, {
+    method: 'PATCH', body: JSON.stringify(fields),
+  });
+  return data.case;
+}
+
 export async function getUsers(token) {
   const { users } = await adminRequest('/users', token);
   return users;
