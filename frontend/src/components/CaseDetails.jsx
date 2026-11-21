@@ -3,11 +3,14 @@ import { getCase } from '../api';
 import CaseSuspects from './CaseSuspects';
 import Panchnamas from './Panchnamas';
 import EvidenceSearch from './EvidenceSearch';
+import EditCase from './EditCase';
 
 export default function CaseDetails({ caseId, token, onBack, canEdit, user }) {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -41,6 +44,19 @@ export default function CaseDetails({ caseId, token, onBack, canEdit, user }) {
               <div><dt>Created by</dt><dd>User #{record.createdBy}</dd></div>
               <div><dt>Status</dt><dd className="status-text">{record.status}</dd></div>
             </dl>
+            {canEdit && (editing ? (
+              <EditCase record={record} token={token} onCancel={() => setEditing(false)}
+                onSaved={updated => {
+                  setRecord(updated);
+                  setEditing(false);
+                  setMessage('Case updated.');
+                }} />
+            ) : (
+              <button className="secondary" onClick={() => { setMessage(''); setEditing(true); }}>
+                Edit case
+              </button>
+            ))}
+            {message && <p className="success" role="status">{message}</p>}
           </article>
           <CaseSuspects caseId={caseId} token={token} canEdit={canEdit} />
           <Panchnamas caseId={caseId} token={token} user={user} />
