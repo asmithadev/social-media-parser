@@ -279,8 +279,14 @@ reports. The backend also rejects print requests for unapproved reports with HTT
 Draft PDFs can still be downloaded for review. The demo shows an empty report list
 and does not generate real PDFs.
 
-The current PDF contains panchnama details, witness names, capture outcomes,
-screenshots and hashes. It does not yet embed extracted OCR text.
+New PDFs contain panchnama details, witness names, capture outcomes, screenshots
+and hashes. An extracted-text page follows each screenshot, using saved OCR from
+MongoDB only when it matches that screenshot's hash. Long text continues onto
+additional pages. Pending, failed, empty and unavailable OCR results are labelled.
+If MongoDB is disconnected and saved OCR is needed, generation returns HTTP 503;
+retry once it is available. OCR is not run automatically by report generation.
+Review extracted text against the screenshot before approval. Running or retrying
+OCR does not change existing PDFs; generate a new report version to include it.
 
 | Request | Response |
 | --- | --- |
