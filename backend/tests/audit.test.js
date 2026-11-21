@@ -498,6 +498,42 @@ test('PostgreSQL audit trail and API', {
     });
 
 
+    await t.test('macOS client upload, verified file round trip, permissions and audit chain', async () => {
+      const fs = require('node:fs');
+      const { createApi, captureSection } = require('../../capture-macos/api');
+      const evidenceDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'macos-capture-'));
+      const oldEvidenceDir = process.env.EVIDENCE_DIR;
+      process.env.EVIDENCE_DIR = evidenceDir;
+      try {
+        const source = await prisma.captureSession.findUnique({ where: { id: sessionId } });
+        const session = (await ok('POST', '/api/panchnamas/' + panchnamaId + '/sessions', 'examiner', {
+          accountId: source.accountId, deviceType: 'macos', toolVersion: '1.0.0',
+        })).session;
+        const bytes = fs.readFileSync(path.join(__dirname, 'fixtures/ocr-sample.png'));
+        const page = { url: () => 'https://example.test/training?token=fictional', screenshot: async () => bytes };
+        const api = createApi(origin + '/api', tokens.examiner);
+        const screenshot = await captureSection(api, page, session.id, sectionId);
+        assert.equal(screenshot.sourceUrl, 'https://example.test/training');
+        const file = await fetch(origin + '/api/screenshots/' + screenshot.id + '/file', {
+          headers: { Authorization: 'Bearer ' + tokens.examiner },
+        });
+        assert.equal(file.status, 200);
+        assert.deepEqual(Buffer.from(await file.arrayBuffer()), bytes);
+        const sections = (await ok('GET', '/api/sessions/' + session.id + '/sections', 'examiner')).sections;
+        assert.equal(sections.find(section => section.id === sectionId).status, 'captured');
+        assert.equal((await captureSection(api, page, session.id, sectionId)).sequenceNo, 2);
+        await assert.rejects(captureSection(createApi(origin + '/api', tokens.reviewer), page, session.id, sectionId), /Examiner access/);
+        await ok('PATCH', '/api/sessions/' + session.id, 'examiner', { status: 'completed' });
+        await assert.rejects(captureSection(api, page, session.id, sectionId), /already ended/);
+        const event = await prisma.auditLog.findFirst({ where: { entityType: 'screenshot', entityId: screenshot.id } });
+        assert.equal(event.userId, users.examiner.id);
+        assert.equal((await verify()).valid, true);
+      } finally {
+        if (oldEvidenceDir === undefined) delete process.env.EVIDENCE_DIR; else process.env.EVIDENCE_DIR = oldEvidenceDir;
+        fs.rmSync(evidenceDir, { recursive: true, force: true });
+      }
+    });
+
     await t.test('session workflow checks: pending sections, section-specific screenshots and failure paths', async () => {
       const fs = require('node:fs');
       const evidenceDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'workflow-evidence-'));
