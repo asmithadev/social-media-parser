@@ -313,7 +313,10 @@ test('PostgreSQL audit trail and API', {
         process.env.EVIDENCE_DIR = evidenceDir;
         const bytes = fs.readFileSync(path.join(__dirname, 'fixtures/ocr-sample.png'));
         const source = await prisma.captureSession.findUnique({ where: { id: sessionId } });
-        const session = (await ok('POST', '/api/panchnamas/' + panchnamaId + '/sessions', 'examiner', {
+        const pan = (await ok('POST', '/api/cases/' + caseId + '/panchnamas', 'examiner', {
+          panchnamaNo: 'OCR-REPORT-P1', authorityRef: 'Fictional authority', location: 'Training room', heldAt: '2026-11-20T05:00:00Z',
+        })).panchnama;
+        const session = (await ok('POST', '/api/panchnamas/' + pan.id + '/sessions', 'examiner', {
           accountId: source.accountId, deviceType: 'macos', toolVersion: '1.0',
         })).session;
         const upload = await fetch(origin + '/api/sessions/' + session.id + '/screenshots?sectionId=' + sectionId + '&sequenceNo=1', {
@@ -369,6 +372,41 @@ test('PostgreSQL audit trail and API', {
         process.env.TESSERACT_PATH = slow;
         const parallel = await Promise.all([request('POST', endpoint + '/parse', 'examiner'), request('POST', endpoint + '/parse', 'examiner')]);
         assert.deepEqual(parallel.map(result => result.status).sort(), [200, 409]);
+
+        await ok('PATCH', '/api/sessions/' + session.id + '/sections/' + sectionId, 'examiner', { status: 'captured' });
+        await ok('PATCH', '/api/sessions/' + session.id, 'examiner', { status: 'completed' });
+        const reportsEndpoint = '/api/panchnamas/' + pan.id + '/reports';
+        const report = (await ok('POST', reportsEndpoint, 'examiner')).report;
+        const download = await fetch(origin + '/api/reports/' + report.id + '/file', {
+          headers: { Authorization: 'Bearer ' + tokens.examiner },
+        });
+        assert.equal(download.status, 200);
+        const pdf = Buffer.from(await download.arrayBuffer());
+        assert.equal(createHash('sha256').update(pdf).digest('hex'), report.sha256Hash);
+        // PDFKit writes text as hex strings inside compressed content streams.
+        function containsText(bytes, text) {
+          const streams = [...bytes.toString('latin1').matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
+          return streams.some(([, stream]) => {
+            try {
+              return require('node:zlib').inflateSync(Buffer.from(stream, 'latin1')).toString()
+                .includes(Buffer.from(text).toString('hex'));
+            } catch { return false; }
+          });
+        }
+        assert.equal(containsText(pdf, 'TRAINING'), true, 'report includes saved OCR text');
+        await ParsedArtifact.updateOne({ screenshot_id: screenshot.id }, {
+          $set: { text: 'MISMATCHED_OCR', 'data.sha256Hash': '0'.repeat(64) },
+        });
+        const mismatchReport = (await ok('POST', reportsEndpoint, 'examiner')).report;
+        const mismatchPdf = fs.readFileSync(path.join(evidenceDir,
+          (await prisma.report.findUnique({ where: { id: mismatchReport.id } })).filePath));
+        assert.equal(containsText(mismatchPdf, 'MISMATCHED_OCR'), false, 'mismatched OCR must not enter report');
+        const unchanged = fs.readFileSync(path.join(evidenceDir,
+          (await prisma.report.findUnique({ where: { id: report.id } })).filePath));
+        assert.deepEqual(unchanged, pdf, 'new OCR results do not rewrite old report versions');
+        await mongoose.disconnect();
+        assert.equal((await request('POST', reportsEndpoint, 'examiner')).status, 503);
+        await mongoose.connect(process.env.TEST_MONGO_URI, { dbName, serverSelectionTimeoutMS: 5000 });
         assert.equal((await verify()).valid, true);
       } finally {
         if (oldExecutable === undefined) delete process.env.TESSERACT_PATH; else process.env.TESSERACT_PATH = oldExecutable;
