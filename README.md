@@ -91,8 +91,10 @@ failed or unavailable results. Generate a new version after OCR changes; existin
 report files and hashes are preserved.
 Print requests require an approved report.
 An admin-only audit page lists entries and verifies the stored hash chain.
-Automated capture clients, platform-specific structured parsing, and the remaining
-frontend screens remain to be built.
+A basic macOS browser client opens a platform for manual sign-in and navigation,
+then captures and uploads the visible page on command. See its
+[setup and usage guide](capture-macos/README.md). Automatic platform navigation,
+iOS capture and platform-specific structured parsing remain to be built.
 
 ---
 
@@ -100,6 +102,7 @@ frontend screens remain to be built.
 
 - `backend/` contains the Express API, MVC structure, Prisma schema, migrations, SQL verification, and tests.
 - `frontend/` contains the basic React app; see its [setup guide](frontend/README.md).
+- `capture-macos/` contains the basic browser screenshot capture and upload client.
 - `backend/docs/audit-trail.md` documents the audit API and its integration tests.
 
 ## Local backend setup
