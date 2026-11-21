@@ -71,6 +71,8 @@ details, with fictional demo data by default and an option to use the existing
 API. Real administrators can create cases, create examiners/reviewers, and assign
 users to cases through simple admin forms. Case details include suspect linking
 and social-account registration for admins, with viewing for assigned users.
+Admins can also edit a case's number, title, description and open/closed status
+from the case details screen.
 Assigned examiners can create panchnamas and add witnesses to their own panchnamas;
 other authorized users can view them.
 The panchnama's examiner can also start/end capture sessions and record section
