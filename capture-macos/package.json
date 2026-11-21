@@ -1,0 +1,11 @@
+{
+  "name": "social-media-capture-macos",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node capture.js",
+    "test": "node --test capture.test.js"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": { "playwright": "^1.58.0" }
+}
