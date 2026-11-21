@@ -5,6 +5,7 @@ const renderReport = require('../utils/report-pdf');
 const readEvidence = require('../utils/evidence-file');
 const { withAuditActor } = require('../services/audit');
 const prisma = require('../config/db-config');
+const ParsedArtifact = require('../models/parsed-artifact');
 const { caseScope, readInput } = require('../utils/records');
 
 function panchnamaScope(user) {
@@ -65,6 +66,18 @@ async function generateReport(req, res) {
     return res.status(409).json({ message: 'Finish open capture sessions before generating a report.' });
   }
 
+  // Only read OCR for screenshots belonging to this authorized panchnama.
+  const parsedIds = record.sessions.flatMap(session => session.screenshots)
+    .filter(screenshot => screenshot.parseStatus === 'parsed').map(screenshot => screenshot.id);
+  let artifacts = [];
+  if (parsedIds.length) {
+    if (ParsedArtifact.db.readyState !== 1) {
+      return res.status(503).json({ message: 'MongoDB is unavailable. Please retry report generation.' });
+    }
+    artifacts = await ParsedArtifact.find({ screenshot_id: { $in: parsedIds } })
+      .select('screenshot_id text status data.sha256Hash').lean();
+  }
+
   const result = await withAuditActor(req.user.id, async tx => {
     // Lock the parent while allocating the next report version.
     await tx.$queryRaw`SELECT panchnama_id FROM panchnamas WHERE panchnama_id = ${record.id} FOR UPDATE`;
@@ -72,7 +85,7 @@ async function generateReport(req, res) {
       where: { panchnamaId: record.id }, orderBy: { versionNo: 'desc' }, select: { versionNo: true },
     });
     const versionNo = (latest?.versionNo ?? 0) + 1;
-    const rendered = await renderReport(record, versionNo);
+    const rendered = await renderReport(record, versionNo, artifacts);
     if (!rendered.bytes) return rendered;
 
     const filePath = path.join('reports', randomUUID() + '.pdf');
