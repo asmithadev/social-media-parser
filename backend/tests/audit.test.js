@@ -534,6 +534,19 @@ test('PostgreSQL audit trail and API', {
         await assert.rejects(captureSection(api, page, session.id, sectionId), /already ended/);
         const event = await prisma.auditLog.findFirst({ where: { entityType: 'screenshot', entityId: screenshot.id } });
         assert.equal(event.userId, users.examiner.id);
+        const iosSession = (await ok('POST', '/api/panchnamas/' + panchnamaId + '/sessions', 'examiner', {
+          accountId: source.accountId, deviceType: 'ios', deviceLabel: 'Fictional iPhone', toolVersion: '1.0.0',
+        })).session;
+        const captureIOS = require('../../capture-ios/device').captureSection;
+        const iosScreenshot = await captureIOS(api, 'fictional-device', iosSession.id, sectionId, async () => bytes);
+        assert.equal(iosScreenshot.sourceUrl, null);
+        const iosFile = await fetch(origin + '/api/screenshots/' + iosScreenshot.id + '/file', {
+          headers: { Authorization: 'Bearer ' + tokens.examiner },
+        });
+        assert.equal(iosFile.status, 200);
+        assert.deepEqual(Buffer.from(await iosFile.arrayBuffer()), bytes);
+        await ok('PATCH', '/api/sessions/' + iosSession.id, 'examiner', { status: 'completed' });
+        await assert.rejects(captureIOS(api, 'fictional-device', iosSession.id, sectionId, async () => bytes), /open iOS/);
         assert.equal((await verify()).valid, true);
       } finally {
         if (oldEvidenceDir === undefined) delete process.env.EVIDENCE_DIR; else process.env.EVIDENCE_DIR = oldEvidenceDir;
