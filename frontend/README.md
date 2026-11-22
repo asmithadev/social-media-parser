@@ -225,6 +225,37 @@ the screenshot; it updates the existing artifact rather than creating duplicates
 text, leaving the original screenshot unchanged. OCR is manual, not automatically
 started on upload. Compare results with the image because OCR can be inaccurate.
 
+After OCR, **Detected fields** shows simple candidates saved in MongoDB alongside
+the original text. The screenshot ID and hash metadata still identify the source.
+This basic parser recognizes:
+
+- `@sample_user`, `Username: sample_user`, or `Handle: sample_user` as usernames.
+- Dates written as `2026-11-22`, `22/11/2026`, `22-11-2026`, or `22 November 2026`.
+- Lines beginning with `Message:` or `Text:` as message candidates, with the
+  original OCR line number. Unlabelled conversation lines are not guessed.
+
+These matches are unverified. Date strings keep their displayed format and may
+be ambiguous or invalid; no timezone or date conversion is inferred. Messages
+are not automatically linked to a username or date. Platform-specific layouts
+and multiline message grouping are not implemented. Review the original image.
+Existing results show a prompt to run OCR again to populate the new fields.
+Retrying clears previous derived fields while pending/failed, and successful OCR
+replaces them. Search and PDF reports continue to use the original OCR text.
+
+The existing parsed-artifact response now includes this optional field (no new
+endpoint or PostgreSQL migration):
+
+```json
+{
+  "structured": {
+    "parserVersion": "basic-v1",
+    "usernames": ["@sample_user"],
+    "dates": ["22 November 2026"],
+    "messages": [{ "lineNumber": 4, "text": "Fictional training message" }]
+  }
+}
+```
+
 Use **Search extracted evidence** in case details to search parsed screenshots in
 that case. Search is literal and case-insensitive, and **Load more results** reads
 the next page. Pending/failed results are excluded from reads/search. Old artifacts
@@ -371,7 +402,8 @@ in `/api`, or configure the host to proxy `/api` to the backend. Vite's developm
 proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
-OCR currently extracts English plain text; platform-specific structured parsing
-remains pending. The [basic macOS client](../capture-macos/README.md) can capture
+OCR extracts English plain text and basic username, date and labelled message
+candidates; platform-specific structured parsing remains pending.
+The [basic macOS client](../capture-macos/README.md) can capture
 and upload the visible browser page after manual platform sign-in and navigation.
 Automatic platform navigation and iOS capture remain pending.
