@@ -406,4 +406,6 @@ OCR extracts English plain text and basic username, date and labelled message
 candidates; platform-specific structured parsing remains pending.
 The [basic macOS client](../capture-macos/README.md) can capture
 and upload the visible browser page after manual platform sign-in and navigation.
-Automatic platform navigation and iOS capture remain pending.
+The [iPhone client](../capture-ios/README.md) captures the connected phone's screen
+after device setup and uploads it to an iOS session. Physical-device testing and
+automatic platform navigation remain pending.
