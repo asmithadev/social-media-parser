@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getParsedEvidence, processScreenshot } from '../api';
+import StructuredEvidence from './StructuredEvidence';
 
 export default function ParsedEvidence({ token, screenshotId, canParse, onStatusChange }) {
   const [result, setResult] = useState(null);
@@ -44,6 +45,7 @@ export default function ParsedEvidence({ token, screenshotId, canParse, onStatus
           {result?.artifact ? (
             result.artifact.text ? <pre className="ocr-text">{result.artifact.text}</pre> : <p>No readable text was found in this image.</p>
           ) : <p className="muted">{result?.message || 'No extracted text is available yet.'}</p>}
+          {result?.artifact && <StructuredEvidence structured={result.artifact.structured} />}
           {canParse && <button disabled={running} onClick={handleProcess}>
             {running ? 'Extracting text…' : result?.parseStatus === 'failed' ? 'Retry OCR' : result?.parseStatus === 'parsed' ? 'Run OCR again' : 'Extract text'}
           </button>}
