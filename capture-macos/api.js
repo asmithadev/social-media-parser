@@ -29,12 +29,20 @@ async function captureSection(api, page, sessionId, sectionId) {
   const source = new URL(page.url());
   if (!['http:', 'https:'].includes(source.protocol)) throw new Error('Open a platform web page before capturing.');
   const { screenshots } = await api('/sessions/' + sessionId + '/screenshots');
+  const bytes = await page.screenshot({ type: 'png' });
+  // Query strings and fragments can contain login tokens; keep only the page path.
+  return uploadCapture(api, bytes, sessionId, sectionId, screenshots, source.origin + source.pathname);
+}
+
+async function uploadCapture(api, bytes, sessionId, sectionId, screenshots, sourceUrl) {
   const sequenceNo = 1 + Math.max(0, ...screenshots
     .filter(row => row.platformSectionId === sectionId).map(row => row.sequenceNo));
-  const bytes = await page.screenshot({ type: 'png' });
+  if (!Buffer.isBuffer(bytes) || bytes.length < 33 || bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
+    throw new Error('Capture did not produce a PNG image.');
+  }
   if (bytes.length > 10 * 1024 * 1024) throw new Error('Screenshot exceeds the API limit of 10 MB.');
-  // Query strings and fragments can contain login tokens; keep only the page path.
-  const query = new URLSearchParams({ sectionId, sequenceNo, sourceUrl: source.origin + source.pathname });
+  const query = new URLSearchParams({ sectionId, sequenceNo });
+  if (sourceUrl) query.set('sourceUrl', sourceUrl);
   const { screenshot } = await api('/sessions/' + sessionId + '/screenshots?' + query, 'POST', bytes);
   if (screenshot.sha256Hash !== createHash('sha256').update(bytes).digest('hex')) {
     throw new Error('Uploaded screenshot hash does not match. Review the evidence in the app.');
@@ -48,4 +56,4 @@ async function captureSection(api, page, sessionId, sectionId) {
   return screenshot;
 }
 
-module.exports = { createApi, captureSection };
+module.exports = { createApi, captureSection, uploadCapture };
