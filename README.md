@@ -96,8 +96,11 @@ Print requests require an approved report.
 An admin-only audit page lists entries and verifies the stored hash chain.
 A basic macOS browser client opens a platform for manual sign-in and navigation,
 then captures and uploads the visible page on command. See its
-[setup and usage guide](capture-macos/README.md). Automatic platform navigation,
-iOS capture and platform-specific structured parsing remain to be built.
+[setup and usage guide](capture-macos/README.md). Automatic platform navigation and
+platform-specific structured parsing remain to be built. A basic
+[connected iPhone client](capture-ios/README.md) captures and uploads the current
+screen using pymobiledevice3 after device setup; physical-device verification
+is still pending.
 
 ---
 
@@ -106,6 +109,7 @@ iOS capture and platform-specific structured parsing remain to be built.
 - `backend/` contains the Express API, MVC structure, Prisma schema, migrations, SQL verification, and tests.
 - `frontend/` contains the basic React app; see its [setup guide](frontend/README.md).
 - `capture-macos/` contains the basic browser screenshot capture and upload client.
+- `capture-ios/` contains the Mac-side connected iPhone screenshot upload client.
 - `backend/docs/audit-trail.md` documents the audit API and its integration tests.
 
 ## Local backend setup
