@@ -331,6 +331,8 @@ test('PostgreSQL audit trail and API', {
         assert.equal(parsed.parseStatus, 'parsed');
         assert.match(parsed.artifact.text, /TRAINING\s+EVIDENCE\s+12345/);
         const stored = await ParsedArtifact.findOne({ screenshot_id: screenshot.id }).lean();
+        assert.equal(stored.structured.parserVersion, 'basic-v1');
+        assert.deepEqual(parsed.artifact.structured, stored.structured);
         assert.equal(stored.status, 'parsed'); assert.equal(stored.data.sha256Hash, screenshot.sha256Hash);
         assert.equal((await prisma.screenshot.findUnique({ where: { id: screenshot.id } })).parseStatus, 'parsed');
         await ok('POST', '/api/cases/' + caseId + '/assignments', 'admin', { userId: users.reviewer.id });
@@ -351,6 +353,7 @@ test('PostgreSQL audit trail and API', {
         process.env.TESSERACT_PATH = path.join(evidenceDir, 'missing-tesseract');
         const failed = await request('POST', endpoint + '/parse', 'examiner');
         assert.equal(failed.status, 422); assert.equal(failed.body.parseStatus, 'failed');
+        assert.equal((await ParsedArtifact.findOne({ screenshot_id: screenshot.id }).lean()).structured, undefined);
         assert.equal((await prisma.screenshot.findUnique({ where: { id: screenshot.id } })).parseStatus, 'failed');
         assert.equal((await ok('GET', searchPath, 'reviewer')).artifacts.length, 0);
         const hidden = await request('GET', endpoint + '/parsed-artifact', 'reviewer');
@@ -368,10 +371,14 @@ test('PostgreSQL audit trail and API', {
         assert.equal((await ok('POST', endpoint + '/parse', 'examiner')).parseStatus, 'parsed');
         // A small local test executable makes overlapping requests deterministic.
         const slow = path.join(evidenceDir, 'slow-ocr');
-        fs.writeFileSync(slow, '#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>setTimeout(()=>{process.stdout.write("TRAINING EVIDENCE 12345");},300));\n', { mode: 0o700 });
+        fs.writeFileSync(slow, '#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>setTimeout(()=>{process.stdout.write("TRAINING EVIDENCE 12345\\nUsername: sample_user\\n22 November 2026\\nMessage: Fictional training message");},300));\n', { mode: 0o700 });
         process.env.TESSERACT_PATH = slow;
         const parallel = await Promise.all([request('POST', endpoint + '/parse', 'examiner'), request('POST', endpoint + '/parse', 'examiner')]);
         assert.deepEqual(parallel.map(result => result.status).sort(), [200, 409]);
+        const structured = (await ok('GET', endpoint + '/parsed-artifact', 'reviewer')).artifact.structured;
+        assert.deepEqual(structured.usernames, ['@sample_user']);
+        assert.deepEqual(structured.dates, ['22 November 2026']);
+        assert.deepEqual(structured.messages, [{ lineNumber: 4, text: 'Fictional training message' }]);
 
         await ok('PATCH', '/api/sessions/' + session.id + '/sections/' + sectionId, 'examiner', { status: 'captured' });
         await ok('PATCH', '/api/sessions/' + session.id, 'examiner', { status: 'completed' });
