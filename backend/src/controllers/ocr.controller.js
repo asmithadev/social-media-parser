@@ -6,6 +6,17 @@ const extractText = require('../services/ocr');
 const parseEvidence = require('../services/parse-evidence');
 const { withAuditActor } = require('../services/audit');
 const { readInput } = require('../utils/records');
+const { z } = require('zod');
+const parseVisualChat = require('../services/visual-chat');
+
+const visualSchema = z.strictObject({
+  visual: z.strictObject({
+    incomingSide: z.enum(['left', 'right']),
+    region: z.strictObject({ x: z.number().min(0).max(1), y: z.number().min(0).max(1),
+      width: z.number().gt(0).max(1), height: z.number().gt(0).max(1) })
+      .refine(area => area.x + area.width <= 1 && area.y + area.height <= 1),
+  }).optional(),
+});
 
 // This basic implementation runs in one API process, without a job queue.
 const running = new Set();
@@ -14,11 +25,16 @@ async function parseScreenshot(req, res) {
   if (req.user.role !== 'examiner') return res.status(403).json({ message: 'Examiner access is required.' });
   const input = readInput(req, res, ['screenshotId']);
   if (!input) return;
+  const options = visualSchema.safeParse(req.body ?? {});
+  if (!options.success) return res.status(400).json({ message: 'Provide a valid chat region and incoming side.' });
   const screenshot = await prisma.screenshot.findFirst({
     where: { id: input.screenshotId, session: { panchnama: { examinerId: req.user.id } } },
     include: { section: { include: { platform: { select: { name: true } } } } },
   });
   if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
+  if (options.data.visual && screenshot.section.sectionName !== 'messages') {
+    return res.status(400).json({ message: 'Visual analysis requires a messages section.' });
+  }
   if (mongoose.connection.readyState !== 1) return res.status(503).json({ message: 'MongoDB is unavailable. Please try again.' });
   if (running.has(screenshot.id)) return res.status(409).json({ message: 'OCR is already running for this screenshot.' });
   if (running.size >= 2) return res.status(429).json({ message: 'Two OCR jobs are running. Please retry shortly.' });
@@ -39,10 +55,13 @@ async function parseScreenshot(req, res) {
       throw error;
     }
     const text = await extractText(file.bytes);
+    const structured = parseEvidence(text, { platform: screenshot.section.platform.name, section: screenshot.section.sectionName });
+    if (options.data.visual) {
+      const tsv = await extractText(file.bytes, 'tsv');
+      structured.visual = parseVisualChat(tsv, options.data.visual.region, options.data.visual.incomingSide);
+    }
     const artifact = await ParsedArtifact.findOneAndUpdate(key,
-      { $set: { text, structured: parseEvidence(text, {
-        platform: screenshot.section.platform.name, section: screenshot.section.sectionName,
-      }), status: 'parsed', error: null, data } },
+      { $set: { text, structured, status: 'parsed', error: null, data } },
       { upsert: true, returnDocument: 'after' }).select('-_id').lean();
     await withAuditActor(req.user.id, tx => tx.screenshot.update({ where: { id: screenshot.id }, data: { parseStatus: 'parsed' } }));
     return res.json({ parseStatus: 'parsed', artifact });
