@@ -1,4 +1,5 @@
 const { uploadCapture } = require('./api');
+const { labels, openSection } = require('./menus');
 
 function validatePlan(plan, sections) {
   if (!Array.isArray(plan) || !plan.length || plan.length > 20) throw new Error('Plan between 1 and 20 sections.');
@@ -8,9 +9,13 @@ function validatePlan(plan, sections) {
       throw new Error('Use each valid session section ID at most once.');
     }
     seen.add(step.sectionId);
-    const url = new URL(step.url);
+    const url = new URL(step.url || step.menuHome);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
       throw new Error('Use a platform web URL without embedded credentials.');
+    }
+    if (step.menuSection && (!labels[step.menuSection] ||
+      sections.find(section => section.id === step.sectionId)?.sectionName !== step.menuSection)) {
+      throw new Error('Menu section must match the session section.');
     }
     if (!Number.isInteger(step.screens) || step.screens < 1 || step.screens > 10) {
       throw new Error('Choose 1 to 10 screens per section.');
@@ -39,11 +44,16 @@ async function runPlan(api, page, sessionId, plan, options = {}) {
   const progress = options.onProgress || (() => {});
   const summary = [];
   for (const step of plan) {
-    const target = new URL(step.url);
+    let target = new URL(step.url || step.menuHome);
     let uploaded = 0;
     try {
       const response = await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
       if (response && !response.ok()) throw new Error('The section page returned HTTP ' + response.status() + '.');
+      if (step.menuSection) {
+        await openSection(page, step.menuSection);
+        await page.waitForTimeout(waitMs);
+        target = new URL(page.url());
+      }
       await scrollPosition(page, step.scrollSelector, false);
       await page.waitForTimeout(waitMs);
       let previousPosition = 0;
