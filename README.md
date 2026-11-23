@@ -97,10 +97,11 @@ An admin-only audit page lists entries and verifies the stored hash chain.
 Admins can export a verified checkpoint as JSON and paste its saved ID/hash into
 the audit screen for later comparison. Keep exported checkpoints in trusted
 storage outside the database.
-A basic macOS browser client opens a platform for manual sign-in and navigation,
-then captures and uploads the visible page on command. See its
-[setup and usage guide](capture-macos/README.md). Automatic platform navigation and
-platform-specific structured parsing remain to be built. A basic
+A basic macOS browser client opens a platform for manual sign-in, then captures
+and uploads the visible page. Its `auto` command visits planned section URLs,
+scrolls and uploads multiple screens. See its
+[setup and usage guide](capture-macos/README.md). Platform-specific menu discovery
+and structured parsing remain to be built. A basic
 [connected iPhone client](capture-ios/README.md) captures and uploads the current
 screen using pymobiledevice3 after device setup; physical-device verification
 is still pending.
