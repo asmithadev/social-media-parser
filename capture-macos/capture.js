@@ -3,6 +3,7 @@ const { Writable } = require('node:stream');
 const { chromium } = require('playwright');
 const { createApi, captureSection } = require('./api');
 const { runPlan, validatePlan } = require('./auto-capture');
+const { labels } = require('./menus');
 
 async function main() {
   // Hide the application's password while typing. It is never saved to a file.
@@ -48,8 +49,24 @@ async function main() {
       try {
         const { sections } = await api('/sessions/' + sessionId + '/sections');
         for (const section of sections) console.log(section.id + ': ' + section.sectionName + ' [' + section.status + ']');
-        const choice = (await terminal.question('Section ID, "auto", "finish", or "quit": ')).trim();
+        const choice = (await terminal.question('Section ID, "auto", "menus", "finish", or "quit": ')).trim();
         if (choice === 'quit') break;
+        if (choice === 'menus') {
+          const menuHome = page.url();
+          const plan = [];
+          console.log('Menu mode starts from the current browser page for each section. Sign in first.');
+          for (const section of sections.filter(section => labels[section.sectionName])) {
+            const screens = Number(await terminal.question(section.sectionName + ': screens (0 to omit, 1-10 to capture): '));
+            if (screens === 0) continue;
+            const scrollSelector = (await terminal.question('Scroll container CSS selector (blank for document): ')).trim() || undefined;
+            plan.push({ sectionId: section.id, menuSection: section.sectionName, menuHome, screens, scrollSelector });
+          }
+          validatePlan(plan, sections);
+          if ((await terminal.question('Type "start" to discover menus and capture the planned sections: ')).trim() !== 'start') continue;
+          console.log(await runPlan(api, page, sessionId, plan, { onProgress: console.log }));
+          console.log('Review screenshots before completing the session.');
+          continue;
+        }
         if (choice === 'auto') {
           const plan = [];
           console.log('Sign in in the browser first. Plan section URLs and screen counts; blank section ID ends the plan.');
