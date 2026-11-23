@@ -88,7 +88,9 @@ Basic parsing also saves username, date and labelled message candidates in Mongo
 and displays them beside the original OCR text. Recognizable WhatsApp/Telegram
 headers and explicit sender/timestamp blocks can produce multiline message
 candidates with sender, displayed date/time and source line ranges. These fields
-require review; visual bubble layouts and identity inference are not implemented.
+require review. Optional chat-area OCR coordinates provide tentative left/right
+and incoming/outgoing text-line positions; full bubble segmentation and sender
+identity inference are not implemented.
 Panchnama screens list report versions and support PDF generation, verified
 downloads, reviewer approval, and audited print requests.
 New PDFs include saved OCR text after each screenshot, with messages for pending,
@@ -101,12 +103,14 @@ the audit screen for later comparison. Keep exported checkpoints in trusted
 storage outside the database.
 A basic macOS browser client opens a platform for manual sign-in, then captures
 and uploads the visible page. Its `auto` command visits planned section URLs,
-scrolls and uploads multiple screens. See its
-[setup and usage guide](capture-macos/README.md). Platform-specific menu discovery
-and broader visual-layout parsing remain to be built. A basic
+scrolls and uploads multiple screens. The `menus` command discovers unique visible
+English section links/tabs without supplied section URLs. See its
+[setup and usage guide](capture-macos/README.md). Broader platform menu rules
+and visual-layout parsing remain to be built. A basic
 [connected iPhone client](capture-ios/README.md) captures and uploads the current
-screen using pymobiledevice3 after device setup; physical-device verification
-is still pending.
+screen using pymobiledevice3 after device setup. Its `auto` plans tap configured
+navigation points and scroll between captures; physical-device verification is
+still pending.
 
 ---
 
