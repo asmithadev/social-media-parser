@@ -419,7 +419,8 @@ differ, configure the API's allowed frontend origin before deploying.
 OCR extracts English plain text and basic username, date and labelled message
 candidates; platform-specific structured parsing remains pending.
 The [basic macOS client](../capture-macos/README.md) can capture
-and upload the visible browser page after manual platform sign-in and navigation.
+and upload the visible browser page after manual platform sign-in. Its `auto`
+command follows supplied section URLs, scrolls and captures multiple screens.
 The [iPhone client](../capture-ios/README.md) captures the connected phone's screen
 after device setup and uploads it to an iOS session. Physical-device testing and
-automatic platform navigation remain pending.
+automatic platform menu discovery remain pending.
