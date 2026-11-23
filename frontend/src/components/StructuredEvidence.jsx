@@ -5,7 +5,7 @@ export default function StructuredEvidence({ structured }) {
     <section aria-label="Structured evidence">
       <h4>Detected fields</h4>
       <p className="muted">These are unverified text matches. Check sender, date and message boundaries against the screenshot.
-        Dates keep their displayed format; bubble direction and sender identity are not inferred.</p>
+        Dates keep their displayed format. Position-based direction candidates do not establish sender identity.</p>
       <p className="muted">Parser: {structured.parserVersion}{structured.platform ? ' | Platform: ' + structured.platform : ''}</p>
       <p><strong>Usernames:</strong> {structured.usernames.length ? structured.usernames.join(', ') : 'None detected.'}</p>
       <p><strong>Date candidates:</strong> {structured.dates.length ? structured.dates.join(', ') : 'None detected.'}</p>
@@ -19,6 +19,21 @@ export default function StructuredEvidence({ structured }) {
           <pre className="ocr-text">{message.text}</pre>
         </div>
       )) : <p>No labelled messages detected.</p>}
+      {structured.visual && <section aria-label="Chat positions">
+        <h5>Chat position candidates</h5>
+        <p>Incoming side selected: {structured.visual.incomingSide}. Boxes are OCR text lines, not confirmed bubble boundaries.</p>
+        <svg viewBox={`0 0 ${structured.visual.imageWidth} ${structured.visual.imageHeight}`}
+          style={{ width: '100%', maxHeight: 400, border: '1px solid #ccc' }} role="img" aria-label="Detected text positions on the screenshot">
+          {structured.visual.candidates.map((candidate, index) => <rect key={index} x={candidate.x} y={candidate.y}
+            width={candidate.width} height={candidate.height} fill={candidate.direction === 'incoming' ? '#c5dafa' : candidate.direction === 'outgoing' ? '#c7e9cc' : '#ddd'}
+            stroke="#555"><title>{candidate.direction}: {candidate.text}</title></rect>)}
+        </svg>
+        {!structured.visual.candidates.length && <p>No readable text lines were found inside the chat area.</p>}
+        {structured.visual.candidates.map((candidate, index) => <div key={index}>
+          <p><strong>{candidate.direction} candidate</strong> ({candidate.side}; x {candidate.x}, y {candidate.y})</p>
+          <pre className="ocr-text">{candidate.text}</pre>
+        </div>)}
+      </section>}
     </section>
   );
 }
