@@ -34,7 +34,7 @@ async function captureSection(api, page, sessionId, sectionId) {
   return uploadCapture(api, bytes, sessionId, sectionId, screenshots, source.origin + source.pathname);
 }
 
-async function uploadCapture(api, bytes, sessionId, sectionId, screenshots, sourceUrl) {
+async function uploadCapture(api, bytes, sessionId, sectionId, screenshots, sourceUrl, markCaptured = true) {
   const sequenceNo = 1 + Math.max(0, ...screenshots
     .filter(row => row.platformSectionId === sectionId).map(row => row.sequenceNo));
   if (!Buffer.isBuffer(bytes) || bytes.length < 33 || bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
@@ -47,6 +47,7 @@ async function uploadCapture(api, bytes, sessionId, sectionId, screenshots, sour
   if (screenshot.sha256Hash !== createHash('sha256').update(bytes).digest('hex')) {
     throw new Error('Uploaded screenshot hash does not match. Review the evidence in the app.');
   }
+  if (!markCaptured) return screenshot;
   try {
     await api('/sessions/' + sessionId + '/sections/' + sectionId, 'PATCH', { status: 'captured' });
   } catch (error) {
