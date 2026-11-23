@@ -331,6 +331,13 @@ test('PostgreSQL audit trail and API', {
         assert.equal(parsed.parseStatus, 'parsed');
         assert.match(parsed.artifact.text, /TRAINING\s+EVIDENCE\s+12345/);
         const stored = await ParsedArtifact.findOne({ screenshot_id: screenshot.id }).lean();
+        const region = { x: 0, y: 0, width: 1, height: 1 };
+        const coordinateText = await require('../src/services/ocr')(bytes, 'tsv');
+        const visual = require('../src/services/visual-chat')(coordinateText, region, 'left');
+        assert.ok(visual.candidates.some(line => line.text.includes('TRAINING')), 'real Tesseract returns positioned text');
+        assert.equal((await request('POST', endpoint + '/parse', 'examiner', {
+          visual: { region, incomingSide: 'left' },
+        })).status, 400, 'visual analysis is limited to messages sections');
         assert.equal(stored.structured.parserVersion, 'basic-v1');
         assert.deepEqual(parsed.artifact.structured, stored.structured);
         assert.equal(stored.status, 'parsed'); assert.equal(stored.data.sha256Hash, screenshot.sha256Hash);
@@ -404,6 +411,24 @@ test('PostgreSQL audit trail and API', {
         assert.equal(chatResult.artifact.structured.messages[0].endLineNumber, 3);
         const chatStored = (await ok('GET', '/api/screenshots/' + chatScreenshot.id + '/parsed-artifact', 'reviewer')).artifact;
         assert.deepEqual(chatStored.structured, chatResult.artifact.structured);
+        const fixtureTsv = [
+          'level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext',
+          '1\t1\t0\t0\t0\t0\t0\t0\t1000\t1000\t-1\t',
+          '5\t1\t1\t1\t1\t1\t50\t200\t200\t30\t95\tHello',
+          '5\t1\t2\t1\t1\t1\t750\t300\t200\t30\t95\tReply',
+        ].join('\n');
+        fs.writeFileSync(slow, '#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>process.stdout.write(process.argv.includes("tsv") ? ' +
+          JSON.stringify(fixtureTsv) + ' : "Fictional chat"));\n', { mode: 0o700 });
+        const visualResult = await ok('POST', '/api/screenshots/' + chatScreenshot.id + '/parse', 'examiner', {
+          visual: { region, incomingSide: 'left' },
+        });
+        assert.deepEqual(visualResult.artifact.structured.visual.candidates.map(row => row.direction), ['incoming', 'outgoing']);
+        const savedVisual = (await ok('GET', '/api/screenshots/' + chatScreenshot.id + '/parsed-artifact', 'reviewer')).artifact.structured.visual;
+        assert.equal(savedVisual.candidates[1].x, 750);
+        assert.equal(savedVisual.incomingSide, 'left');
+        assert.equal((await request('POST', '/api/screenshots/' + chatScreenshot.id + '/parse', 'examiner', {
+          visual: { incomingSide: 'left', region: { x: 0.8, y: 0, width: 0.5, height: 1 } },
+        })).status, 400);
         await ok('PATCH', '/api/sessions/' + chatSession.id, 'examiner', { status: 'failed' });
 
         await ok('PATCH', '/api/sessions/' + session.id + '/sections/' + sectionId, 'examiner', { status: 'captured' });
