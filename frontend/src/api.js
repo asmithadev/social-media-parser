@@ -281,9 +281,9 @@ export async function getParsedEvidence(token, screenshotId) {
   }
 }
 
-export function processScreenshot(token, screenshotId) {
+export function processScreenshot(token, screenshotId, options = {}) {
   if (isDemoMode) throw new Error('Demo OCR is read-only.');
-  return request(`/screenshots/${screenshotId}/parse`, token, { method: 'POST' });
+  return request(`/screenshots/${screenshotId}/parse`, token, { method: 'POST', body: JSON.stringify(options) });
 }
 
 export function searchEvidence(token, caseId, query, after = null) {
