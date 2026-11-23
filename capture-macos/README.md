@@ -2,8 +2,10 @@
 
 This small Node.js script opens a visible Chromium browser. The examiner signs
 in to the social platform there, navigates to a section, and presses Enter in the
-terminal to capture and upload the visible page. There are no platform-specific
-selectors or automatic scrolling yet. Native apps and iOS are not supported.
+terminal to capture and upload the visible page. An `auto` command can also visit
+planned section URLs, scroll and upload several screens. Platform-specific menu
+discovery is not implemented. This browser client does not capture native apps;
+use the separate [iPhone client](../capture-ios/README.md) for connected iOS capture.
 
 ## Setup
 
@@ -47,6 +49,47 @@ mode first. The client uses existing APIs and does not need database credentials
    leave the session open and continue later.
 9. In the React app, refresh the session to review screenshots, run OCR, generate
    a PDF, and request reviewer approval.
+
+## Automatic navigation and scrolling
+
+After signing in to the platform in the opened browser, enter `auto` in the
+terminal menu. Build a small plan by supplying:
+
+1. A section ID from the displayed list.
+2. That section's exact URL for the intended account.
+3. A maximum screen count from 1 to 10.
+4. An optional CSS selector for a scrollable feed container. Leave blank for
+   whole-page scrolling. For example, `#feed` works only if that element exists
+   and scrolls on the target page.
+
+Repeat for more sections, then enter a blank section ID to finish planning.
+Choose a wait after navigation/scroll (default 1500 ms, up to 10000 ms), then type
+`start` when signed in and ready. The client visits the supplied URLs in order,
+starts each page/container at its top, captures the viewport, scrolls down by 80%
+of the container height and repeats. There is 20% overlap to help review adjacent
+screens. It stops a section when scrolling no longer advances, or when the screen
+limit is reached. A maximum of 20 unique session sections can be planned.
+
+For example, plan the displayed posts section with its account posts URL and
+three screens, then the profile section with its profile URL and one screen.
+Section IDs and URLs are specific to your case/account; the client does not guess
+them from platform names. Plans are entered in the terminal, not saved to files.
+
+Each PNG uses the existing upload API, sequence numbering and hash check. The
+section's captured outcome is saved only after the batch succeeds. The client
+does not automatically complete the session: review captures and use `finish`.
+If a batch fails, earlier uploads remain as evidence. An existing section outcome
+is not automatically cleared, so review it after a failed rerun. There are no
+automatic upload retries or rollback/deletion of earlier screenshots.
+
+Unexpected redirects to a different origin/path/hash, visible password forms,
+HTTP page errors or upload errors stop the plan and return to the manual menu.
+These checks do not establish that a page contains the right account or section;
+review the screenshots. A sign-in page without a visible password field may need
+manual detection. Loading delays, infinite feeds and virtualized lists can leave
+content unloaded; choose a suitable wait and screen limit. Reaching the bottom
+means no scroll movement was detected, not that the account was fully captured.
+Automatic phone navigation, menu clicks and content expansion are not included.
 
 The client checks the uploaded image's SHA-256 against the API response before
 saving a captured outcome. Uploads and outcome changes use the existing audited
