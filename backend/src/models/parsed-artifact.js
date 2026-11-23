@@ -6,9 +6,11 @@ const schema = new mongoose.Schema({
   structured: {
     type: new mongoose.Schema({
       parserVersion: String,
+      platform: String,
       usernames: [String],
       dates: [String],
-      messages: [{ _id: false, lineNumber: Number, text: String }],
+      messages: [{ _id: false, lineNumber: Number, endLineNumber: Number, text: String,
+        sender: String, displayedDate: String, displayedTime: String, layout: String }],
     }, { _id: false }),
     default: undefined,
   },
