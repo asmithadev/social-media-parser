@@ -2,6 +2,7 @@ const readline = require('node:readline/promises');
 const { Writable } = require('node:stream');
 const { chromium } = require('playwright');
 const { createApi, captureSection } = require('./api');
+const { runPlan, validatePlan } = require('./auto-capture');
 
 async function main() {
   // Hide the application's password while typing. It is never saved to a file.
@@ -47,8 +48,31 @@ async function main() {
       try {
         const { sections } = await api('/sessions/' + sessionId + '/sections');
         for (const section of sections) console.log(section.id + ': ' + section.sectionName + ' [' + section.status + ']');
-        const choice = (await terminal.question('Section ID, "finish", or "quit": ')).trim();
+        const choice = (await terminal.question('Section ID, "auto", "finish", or "quit": ')).trim();
         if (choice === 'quit') break;
+        if (choice === 'auto') {
+          const plan = [];
+          console.log('Sign in in the browser first. Plan section URLs and screen counts; blank section ID ends the plan.');
+          while (true) {
+            const id = (await terminal.question('Plan section ID (blank to stop adding): ')).trim();
+            if (!id) break;
+            const url = (await terminal.question('Section page URL: ')).trim();
+            const screens = Number(await terminal.question('Maximum screens (1-10): '));
+            const scrollSelector = (await terminal.question('Scroll container CSS selector (blank for whole page): ')).trim() || undefined;
+            plan.push({ sectionId: Number(id), url, screens, scrollSelector });
+            validatePlan(plan, sections);
+          }
+          validatePlan(plan, sections);
+          const delay = (await terminal.question('Wait after navigation/scroll in milliseconds (Enter for 1500): ')).trim();
+          const waitMs = delay ? Number(delay) : 1500;
+          if (!Number.isInteger(waitMs) || waitMs < 0 || waitMs > 10000) throw new Error('Choose a wait from 0 to 10000 ms.');
+          for (const step of plan) console.log('Section ' + step.sectionId + ': up to ' + step.screens + ' screens.');
+          if ((await terminal.question('Type "start" when signed in and ready: ')).trim() !== 'start') continue;
+          const summary = await runPlan(api, page, sessionId, plan, { waitMs, onProgress: console.log });
+          console.log('Plan finished:', summary);
+          console.log('Review the screenshots in the app. Use finish when the session is ready.');
+          continue;
+        }
         if (choice === 'finish') {
           await api('/sessions/' + sessionId, 'PATCH', { status: 'completed' });
           console.log('Session completed. Continue with OCR and reports in the app.');
