@@ -345,15 +345,29 @@ first invalid entry when available. A failed verification can arrive with HTTP
 Verification is a snapshot; it does not continuously monitor later writes.
 
 A valid remaining prefix cannot reveal deletion of the chain's final entries.
-Keep a trusted checkpoint (ID/hash) outside the database. Advanced checkpoint
-comparison is available through the existing API, documented in
-[`backend/docs/audit-trail.md`](../backend/docs/audit-trail.md); this basic page
-does not yet submit checkpoints or store them automatically.
+Keep a trusted checkpoint (ID/hash) outside the database:
+
+1. Leave both checkpoint fields blank and click **Verify hash chain**.
+2. After a valid result with a nonempty chain, click **Export checkpoint** to
+   download JSON containing `checkpointId`, `checkpointHash` and `checkedAt`.
+   Keep that file in a trusted location outside the database. It contains no token.
+3. Later, paste the saved ID and hash into the optional fields and verify again.
+   The result explicitly shows a match, mismatch/missing entry, or no comparison.
+
+Both fields must be supplied together. IDs stay strings to preserve 64-bit
+precision. A mismatch is a verification failure even when HTTP status is 200.
+Export is unavailable for an invalid chain, a failed comparison or an empty chain.
+The exported checkpoint describes the displayed verification snapshot, not later
+writes. Exporting does not automatically save to trusted storage, sign the file,
+or establish trust in an already compromised chain. There is no automatic file
+import or scheduled checkpoint storage in this version.
+See [`backend/docs/audit-trail.md`](../backend/docs/audit-trail.md) for API details.
 
 | Request | Response |
 | --- | --- |
 | `GET /api/audit-logs?limit=50&after=…` | `{ logs: [...], nextCursor }` |
 | `GET /api/audit-logs/verify` | `{ valid, checked, headId, headHash, firstInvalidId, checkpointMatches }` |
+| `GET /api/audit-logs/verify?checkpointId=…&checkpointHash=…` | Same response, including the checkpoint comparison result |
 
 ## Read the code
 
