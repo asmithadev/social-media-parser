@@ -336,6 +336,9 @@ export function getAuditLogs(token, after = null) {
   return adminRequest(`/audit-logs?${params}`, token);
 }
 
-export function verifyAuditChain(token) {
-  return adminRequest('/audit-logs/verify', token);
+export function verifyAuditChain(token, checkpointId = '', checkpointHash = '') {
+  const params = new URLSearchParams();
+  if (checkpointId) params.set('checkpointId', checkpointId);
+  if (checkpointHash) params.set('checkpointHash', checkpointHash);
+  return adminRequest('/audit-logs/verify' + (params.size ? '?' + params : ''), token, { cache: 'no-store' });
 }
