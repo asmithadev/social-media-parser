@@ -235,10 +235,10 @@ This basic parser recognizes:
   original OCR line number. Unlabelled conversation lines are not guessed.
 
 These matches are unverified. Date strings keep their displayed format and may
-be ambiguous or invalid; no timezone or date conversion is inferred. Messages
-are not automatically linked to a username or date. Platform-specific layouts
-and multiline message grouping are not implemented. Review the original image.
-Existing results show a prompt to run OCR again to populate the new fields.
+be ambiguous or invalid; no timezone or date conversion is inferred.
+Recognized message layouts can associate a sender and displayed date/time as
+candidates, as described below. Review the original image. Run OCR again on
+existing results to apply the newer parser.
 Retrying clears previous derived fields while pending/failed, and successful OCR
 replaces them. Search and PDF reports continue to use the original OCR text.
 
@@ -255,6 +255,48 @@ endpoint or PostgreSQL migration):
   }
 }
 ```
+
+### Message layout parsing
+
+The backend selects rules from the screenshot's registered platform name and
+section. These rules apply only to the `messages` section. They recognize the
+following text arrangements when OCR preserves them:
+
+| Platform | Header example |
+| --- | --- |
+| WhatsApp | `[22/11/2026, 10:30 AM] Alice: Hello` or `22/11/2026, 10:30 - Alice: Hello` |
+| Telegram | `Alice, [22.11.2026 10:30]` followed by message lines |
+| Instagram, Facebook, Twitter, WhatsApp, Telegram | A sender line followed immediately by a complete date/time line such as `22 November 2026, 10:30`, then message lines |
+
+Message lines continue until another recognized header, blank line, standalone
+date/time or a recognized status/composer line. Each candidate has a `sender`,
+`displayedDate`, `displayedTime`, `lineNumber`, `endLineNumber`, `layout` and `text`
+(including newlines). The response's `parserVersion` is `message-layout-v1` and
+`platform` records the selected platform when a layout matches. Basic labelled
+messages outside matched blocks are retained without inferred sender metadata.
+Unsupported or unmatched layouts fall back to `basic-v1`.
+
+For example, Telegram text:
+
+```text
+Alice, [22.11.2026 10:30]
+First message line
+Second message line
+```
+
+becomes one message candidate with sender `Alice`, the displayed date/time, text
+`First message line\nSecond message line` and source lines 1 to 3. These fields are
+stored in MongoDB and shown under **Detected fields** using the same existing API.
+
+This is text-pattern recognition, not visual layout recognition. Timestamp
+headers may resemble copied/exported chat text and are not guaranteed to appear
+in native screenshot OCR. The parser does not inspect bubble coordinates, infer
+left/right sender identity, resolve `Today`/`Yesterday`, merge across screenshots,
+or validate identities and calendar dates. Blank lines may split real messages,
+and unrecognized toolbar text may join a candidate. Tests cover fictional text
+arrangements; representative platform screenshots still need manual validation.
+Add more rules only with examples from the target layout. Raw OCR and screenshots
+remain available for review; PDF/search output continues using raw OCR.
 
 Use **Search extracted evidence** in case details to search parsed screenshots in
 that case. Search is literal and case-insensitive, and **Load more results** reads
@@ -417,7 +459,8 @@ proxy is not included in the production build. If frontend and API origins
 differ, configure the API's allowed frontend origin before deploying.
 
 OCR extracts English plain text and basic username, date and labelled message
-candidates; platform-specific structured parsing remains pending.
+candidates, with multiline grouping for supported message header patterns.
+Visual bubble-layout parsing remains pending.
 The [basic macOS client](../capture-macos/README.md) can capture
 and upload the visible browser page after manual platform sign-in. Its `auto`
 command follows supplied section URLs, scrolls and captures multiple screens.
