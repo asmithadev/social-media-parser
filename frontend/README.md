@@ -288,15 +288,53 @@ becomes one message candidate with sender `Alice`, the displayed date/time, text
 `First message line\nSecond message line` and source lines 1 to 3. These fields are
 stored in MongoDB and shown under **Detected fields** using the same existing API.
 
-This is text-pattern recognition, not visual layout recognition. Timestamp
+This message-header parser uses text patterns. Timestamp
 headers may resemble copied/exported chat text and are not guaranteed to appear
-in native screenshot OCR. The parser does not inspect bubble coordinates, infer
+in native screenshot OCR. This parser does not inspect bubble coordinates, infer
 left/right sender identity, resolve `Today`/`Yesterday`, merge across screenshots,
 or validate identities and calendar dates. Blank lines may split real messages,
 and unrecognized toolbar text may join a candidate. Tests cover fictional text
 arrangements; representative platform screenshots still need manual validation.
 Add more rules only with examples from the target layout. Raw OCR and screenshots
 remain available for review; PDF/search output continues using raw OCR.
+
+### Optional chat position analysis
+
+For screenshots in a `messages` section, enable **Analyze chat positions**, choose
+the chat rectangle and incoming side, then run OCR. Rectangle values are
+percentages of the full image: `x`/`y` are the top-left corner, `width`/`height`
+are its size. The default excludes the top and bottom 15%; adjust it to exclude
+the actual header, sidebar and composer in your screenshot. The rectangle must
+fit inside the image. Incoming side defaults to left and can be changed to right.
+
+The backend makes a second local Tesseract pass using
+[TSV coordinates](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage).
+Words with OCR confidence below 40 and words outside the selected area are
+excluded. Words from the same OCR line are combined. The nearer horizontal edge
+determines left/right placement, with near-centered lines marked unknown. The
+selected side determines tentative incoming/outgoing direction. No account
+identity is inferred, and text lines are not actual detected bubble borders.
+Long lines, time labels and unusual alignment can give incorrect direction.
+
+**Chat position candidates** displays a position diagram and the text, coordinates
+and tentative direction for each line. These are separate from sender/timestamp
+message candidates; the two are not automatically associated. Compare with the
+original image. OCR coordinates and settings are saved in MongoDB under
+`artifact.structured.visual`; screenshots, hashes and existing PDFs are preserved.
+Older results need OCR again with the option enabled. Running without this option
+replaces derived fields and removes previous visual analysis.
+
+The existing POST `/api/screenshots/:screenshotId/parse` accepts optional JSON:
+
+```json
+{ "visual": { "incomingSide": "left", "region": { "x": 0, "y": 0.15, "width": 1, "height": 0.7 } } }
+```
+
+API rectangle values are fractions from 0 to 1. Invalid settings or non-message
+sections return 400 before processing. The existing empty-body request still
+works. Text OCR and coordinate OCR each have a one-minute limit; enabling both
+can take up to two minutes. Synthetic coordinate tests and a real local Tesseract
+round trip pass; validation against representative chat screenshots is pending.
 
 Use **Search extracted evidence** in case details to search parsed screenshots in
 that case. Search is literal and case-insensitive, and **Load more results** reads
@@ -460,10 +498,13 @@ differ, configure the API's allowed frontend origin before deploying.
 
 OCR extracts English plain text and basic username, date and labelled message
 candidates, with multiline grouping for supported message header patterns.
-Visual bubble-layout parsing remains pending.
+Optional OCR coordinate analysis provides tentative incoming/outgoing text-line
+positions within a selected chat area; complete bubble segmentation remains pending.
 The [basic macOS client](../capture-macos/README.md) can capture
 and upload the visible browser page after manual platform sign-in. Its `auto`
 command follows supplied section URLs, scrolls and captures multiple screens.
+Its `menus` command can instead discover unique visible English section links/tabs.
 The [iPhone client](../capture-ios/README.md) captures the connected phone's screen
-after device setup and uploads it to an iOS session. Physical-device testing and
-automatic platform menu discovery remain pending.
+after device setup and uploads it to an iOS session. An `auto` plan can tap
+configured navigation points and scroll between captures. Physical-device testing
+and broader platform-specific menu rules remain pending.
