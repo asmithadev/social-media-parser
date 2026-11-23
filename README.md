@@ -94,6 +94,9 @@ failed or unavailable results. Generate a new version after OCR changes; existin
 report files and hashes are preserved.
 Print requests require an approved report.
 An admin-only audit page lists entries and verifies the stored hash chain.
+Admins can export a verified checkpoint as JSON and paste its saved ID/hash into
+the audit screen for later comparison. Keep exported checkpoints in trusted
+storage outside the database.
 A basic macOS browser client opens a platform for manual sign-in and navigation,
 then captures and uploads the visible page on command. See its
 [setup and usage guide](capture-macos/README.md). Automatic platform navigation and
