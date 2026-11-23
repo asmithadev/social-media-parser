@@ -380,6 +380,32 @@ test('PostgreSQL audit trail and API', {
         assert.deepEqual(structured.dates, ['22 November 2026']);
         assert.deepEqual(structured.messages, [{ lineNumber: 4, text: 'Fictional training message' }]);
 
+        // Exercise platform selection and MongoDB's nested message schema through OCR.
+        const chatPlatform = await withAuditActor(users.admin.id, tx => tx.platform.create({
+          data: { name: 'telegram', sections: { create: { sectionName: 'messages' } } }, include: { sections: true },
+        }));
+        const sourceAccount = await prisma.socialAccount.findUnique({ where: { id: source.accountId } });
+        const chatAccount = (await ok('POST', '/api/suspects/' + sourceAccount.suspectId + '/accounts', 'admin', {
+          platformId: chatPlatform.id, handle: 'fictional_chat',
+        })).account;
+        const chatSession = (await ok('POST', '/api/panchnamas/' + pan.id + '/sessions', 'examiner', {
+          accountId: chatAccount.id, deviceType: 'macos', toolVersion: '1.0',
+        })).session;
+        const chatUpload = await fetch(origin + '/api/sessions/' + chatSession.id + '/screenshots?sectionId=' + chatPlatform.sections[0].id + '&sequenceNo=1', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + tokens.examiner, 'Content-Type': 'image/png' }, body: bytes,
+        });
+        assert.equal(chatUpload.status, 201);
+        const chatScreenshot = (await chatUpload.json()).screenshot;
+        fs.writeFileSync(slow, '#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>process.stdout.write("Alice, [22.11.2026 10:30]\\nFirst line\\nSecond line"));\n', { mode: 0o700 });
+        const chatResult = await ok('POST', '/api/screenshots/' + chatScreenshot.id + '/parse', 'examiner');
+        assert.equal(chatResult.artifact.structured.platform, 'telegram');
+        assert.equal(chatResult.artifact.structured.messages[0].sender, 'Alice');
+        assert.equal(chatResult.artifact.structured.messages[0].text, 'First line\nSecond line');
+        assert.equal(chatResult.artifact.structured.messages[0].endLineNumber, 3);
+        const chatStored = (await ok('GET', '/api/screenshots/' + chatScreenshot.id + '/parsed-artifact', 'reviewer')).artifact;
+        assert.deepEqual(chatStored.structured, chatResult.artifact.structured);
+        await ok('PATCH', '/api/sessions/' + chatSession.id, 'examiner', { status: 'failed' });
+
         await ok('PATCH', '/api/sessions/' + session.id + '/sections/' + sectionId, 'examiner', { status: 'captured' });
         await ok('PATCH', '/api/sessions/' + session.id, 'examiner', { status: 'completed' });
         const reportsEndpoint = '/api/panchnamas/' + pan.id + '/reports';
