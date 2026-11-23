@@ -7,6 +7,13 @@ const schema = new mongoose.Schema({
     type: new mongoose.Schema({
       parserVersion: String,
       platform: String,
+      visual: {
+        type: new mongoose.Schema({
+          method: String, incomingSide: String, imageWidth: Number, imageHeight: Number,
+          region: { x: Number, y: Number, width: Number, height: Number },
+          candidates: [{ _id: false, text: String, x: Number, y: Number, width: Number, height: Number, side: String, direction: String }],
+        }, { _id: false }), default: undefined,
+      },
       usernames: [String],
       dates: [String],
       messages: [{ _id: false, lineNumber: Number, endLineNumber: Number, text: String,
