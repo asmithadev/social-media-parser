@@ -3,8 +3,8 @@
 This small Node.js script opens a visible Chromium browser. The examiner signs
 in to the social platform there, navigates to a section, and presses Enter in the
 terminal to capture and upload the visible page. An `auto` command can also visit
-planned section URLs, scroll and upload several screens. Platform-specific menu
-discovery is not implemented. This browser client does not capture native apps;
+planned section URLs, scroll and upload several screens. A `menus` command finds
+recognizable English section links/tabs and clicks them. This browser client does not capture native apps;
 use the separate [iPhone client](../capture-ios/README.md) for connected iOS capture.
 
 ## Setup
@@ -101,6 +101,25 @@ again when restarting it.
 The source URL stored with the screenshot excludes its query and fragment, which
 may contain sign-in tokens. A screenshot captures only what is visible, not the
 whole account or unloaded content. It is not a capture of the macOS desktop.
+
+## Discover section menus
+
+After manual sign-in, leave the browser on a page containing the platform's
+section navigation and enter `menus` in the terminal. Enter 0 to omit a section,
+or 1-10 screens to include it. Optionally specify its feed scroll container.
+Type `start` to run. Each section begins at the current page saved as the menu
+home, discovers a matching visible link/tab, clicks it, then uses the existing
+scroll/capture/upload loop. You do not need to supply each section URL.
+
+Simple English aliases include Posts/Tweets, Messages/Chats/Direct,
+Profile/About, Friends, Followers, Following and Timeline. The client only clicks
+a unique visible link or tab. It does not click buttons (for example, a Following
+button could change follow state), open hidden menus or guess between duplicate
+matches. Missing/ambiguous menus and links to another origin stop the plan.
+For unsupported layouts or languages, use URL-based `auto` or manual capture.
+Labels alone do not confirm the account/section, so review all screenshots.
+This mode has been checked with fictional navigation pages; real-platform menus
+still need testing with the intended accounts.
 
 ## Errors and retries
 
