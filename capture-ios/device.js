@@ -35,3 +35,20 @@ async function captureSection(api, udid, sessionId, sectionId, capture = takeScr
 }
 
 module.exports = { takeScreenshot, captureSection };
+
+async function gesture(udid, action, coordinates) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9-]{7,79}$/.test(udid)) throw new Error('Enter the connected iPhone UDID.');
+  const count = action === 'tap' ? 2 : action === 'drag' ? 4 : 0;
+  if (!count || coordinates.length !== count || !coordinates.every(value => Number.isInteger(value) && value >= 0 && value <= 65535)) {
+    throw new Error('Use tap/drag coordinates from 0 to 65535.');
+  }
+  try {
+    await run(process.env.IOS_DEVICE_TOOL || 'pymobiledevice3',
+      ['developer', 'core-device', 'universal-hid-service', action, '--udid', udid, '--', ...coordinates.map(String)],
+      { timeout: 60000, maxBuffer: 1024 * 1024 });
+  } catch {
+    throw new Error('iPhone navigation failed. Check HID service support, pairing and tunnel setup.');
+  }
+}
+
+module.exports.gesture = gesture;
