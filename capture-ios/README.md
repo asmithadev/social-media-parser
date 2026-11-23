@@ -2,8 +2,8 @@
 
 This basic Mac-side client captures the connected iPhone's current screen using
 `pymobiledevice3`, then uploads the original PNG to an existing iOS capture
-session. Sign in and navigate manually in the official platform app on the phone.
-It does not automate taps, scrolling or platform sign-in.
+session. Sign in manually in the official platform app on the phone. An `auto`
+plan can tap configured navigation points and scroll between captures.
 
 ## Setup on the Mac
 
@@ -76,16 +76,47 @@ the server may already have saved the image. If saving the outcome fails after
 upload, the client identifies the screenshot; save the outcome in the app.
 Restart and sign in again if the application token expires.
 
+## Automatic tap-and-scroll plans
+
+Enter `auto` in the terminal. For each session section, provide a navigation tap
+path as `x,y;x,y` (up to five taps), a screen count from 1 to 10, and a finger
+swipe direction (`up` or `down`). A blank tap path captures the current screen.
+Enter a blank section ID to finish planning, then type `start`.
+
+Coordinates are normalized integers from 0 to 65535 across the screen, as in the
+[pymobiledevice3 HID recipes](https://doronz88.github.io/pymobiledevice3/latest/guides/cli-recipes/).
+For a screen point in pixels, calculate `x / screenWidth * 65535` and
+`y / screenHeight * 65535`, rounded to integers. Coordinate tap paths must be
+calibrated to the navigation controls on the target phone. Keep orientation and
+app layout fixed. Plans run sequentially: the next section's taps start from
+where the previous section ended. Start with one section and one capture to check
+the coordinates. This version does not discover phone menus or launch the app.
+
+The client invokes `developer core-device universal-hid-service tap` and `drag`
+with the selected UDID. A contact drag provides the scroll gesture; the separate
+tool `swipe` command is pointer motion and is not used. HID support depends on the
+phone and installed tool version. It is distinct from screenshot service support.
+The plan waits 1.5 seconds after each tap/drag, uploads each screen and marks a
+section captured after its batch succeeds. Identical consecutive PNGs stop a
+section early. Time changes or animations can prevent identical-image detection,
+so the screen cap still applies. Completion remains manual.
+
+Use navigation-only tap targets; the client cannot tell which control occupies a
+coordinate. It does not type credentials or messages. Failed device commands or
+uploads stop the plan, preserving earlier evidence. Review screenshot lists and
+the current phone screen before rerunning; existing outcomes are not reset.
+Physical-device navigation still needs validation on your phone.
+
 ## Tests and current limits
 
 ```sh
-node --test capture-ios/device.test.js
+node --test capture-ios/*.test.js
 ```
 
 Tests use a fake device executable and fictional PNG to verify argument handling,
 temporary cleanup, image preservation, numbering and errors. Backend integration
 tests verify iOS uploads and file retrieval through the real API. No phone or
 platform sign-in has been tested here: pymobiledevice3 is not installed on this
-workspace. Physical capture must be checked on your connected test iPhone before
-using this workflow. Simulator capture and automatic device control are not part
-of this version.
+workspace. Physical capture and navigation must be checked on your connected test
+iPhone before using this workflow. Simulator capture, automatic menu discovery
+and recognition of the active account are not part of this version.
