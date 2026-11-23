@@ -2,6 +2,7 @@ const readline = require('node:readline/promises');
 const { Writable } = require('node:stream');
 const { createApi } = require('../capture-macos/api');
 const { captureSection } = require('./device');
+const { runPlan, validatePlan } = require('./auto-capture');
 
 async function main() {
   let hidden = false;
@@ -36,8 +37,28 @@ async function main() {
       try {
         const { sections } = await api('/sessions/' + sessionId + '/sections');
         for (const section of sections) console.log(section.id + ': ' + section.sectionName + ' [' + section.status + ']');
-        const choice = (await terminal.question('Section ID, "finish", or "quit": ')).trim();
+        const choice = (await terminal.question('Section ID, "auto", "finish", or "quit": ')).trim();
         if (choice === 'quit') break;
+        if (choice === 'auto') {
+          const plan = [];
+          console.log('Open the platform on the phone first. Tap coordinates use 0-65535 across the screen.');
+          console.log('Tap paths run sequentially from the previous screen. Keep orientation fixed.');
+          while (true) {
+            const id = (await terminal.question('Section ID (blank to end plan): ')).trim();
+            if (!id) break;
+            const points = (await terminal.question('Navigation taps x,y;x,y (blank for current screen): ')).trim();
+            const taps = points ? points.split(';').map(point => point.split(',').map(value => Number(value.trim()))) : [];
+            const screens = Number(await terminal.question('Screens (1-10): '));
+            const swipe = (await terminal.question('Finger swipe direction up/down (Enter for up): ')).trim() || 'up';
+            plan.push({ sectionId: Number(id), taps, screens, swipe });
+            validatePlan(plan, sections);
+          }
+          validatePlan(plan, sections);
+          if ((await terminal.question('Type "start" when the phone is positioned at the start of this plan: ')).trim() !== 'start') continue;
+          await runPlan(api, udid, sessionId, plan, { onProgress: console.log });
+          console.log('Review captures before using finish.');
+          continue;
+        }
         if (choice === 'finish') {
           await api('/sessions/' + sessionId, 'PATCH', { status: 'completed' });
           console.log('Session completed. Review evidence and run OCR in the app.');
