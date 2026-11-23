@@ -8,6 +8,7 @@ const { runPlan, validatePlan } = require('./auto-capture');
 test('automatic navigation, scrolling, section uploads and failure handling', async t => {
   const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'text/html');
+    if (req.url === '/menu') return res.end('<nav><a href="/posts">Posts</a><a href="/feed">Messages</a></nav>');
     if (req.url === '/redirect') { res.writeHead(302, { Location: '/login' }); return res.end(); }
     if (req.url === '/login') return res.end('<input type="password">');
     if (req.url === '/missing') { res.statusCode = 404; return res.end('Not found'); }
@@ -26,7 +27,7 @@ test('automatic navigation, scrolling, section uploads and failure handling', as
     function reset() { uploads = []; outcomes = []; failAt = Infinity; }
     const api = async (endpoint, method, body) => {
       if (endpoint === '/sessions/7') return { session: { status: 'open', deviceType: 'macos' } };
-      if (endpoint.endsWith('/sections')) return { sections: [{ id: 1 }, { id: 2 }] };
+      if (endpoint.endsWith('/sections')) return { sections: [{ id: 1, sectionName: 'posts' }, { id: 2, sectionName: 'messages' }] };
       if (!method) return { screenshots: uploads };
       if (method === 'POST') {
         if (uploads.length === failAt) throw new Error('Upload failed');
@@ -40,6 +41,22 @@ test('automatic navigation, scrolling, section uploads and failure handling', as
       outcomes.push(endpoint);
     };
     const run = plan => runPlan(api, page, 7, plan, { waitMs: 100 });
+    await t.test('discover and click section links without supplied section URLs', async () => {
+      reset();
+      await run([
+        { sectionId: 1, menuSection: 'posts', menuHome: origin + '/menu', screens: 1 },
+        { sectionId: 2, menuSection: 'messages', menuHome: origin + '/menu', screens: 1 },
+      ]);
+      assert.equal(outcomes.length, 2);
+      assert.equal(new URL(page.url()).pathname, '/feed');
+      const { openSection } = require('./menus');
+      await page.setContent('<a href="/posts">Posts</a><a href="/other">Posts</a>');
+      await assert.rejects(openSection(page, 'posts'), /ambiguous/);
+      await page.setContent('<button>Following</button>');
+      await assert.rejects(openSection(page, 'following'), /missing/);
+      await page.setContent('<a href="https://outside.example.test">Posts</a>');
+      await assert.rejects(openSection(page, 'posts'), /outside/);
+    });
     await t.test('visit two URLs, scroll page and nested feed, and mark each section after its uploads', async () => {
       reset();
       const summary = await run([
