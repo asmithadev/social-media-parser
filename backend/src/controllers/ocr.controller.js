@@ -16,6 +16,7 @@ async function parseScreenshot(req, res) {
   if (!input) return;
   const screenshot = await prisma.screenshot.findFirst({
     where: { id: input.screenshotId, session: { panchnama: { examinerId: req.user.id } } },
+    include: { section: { include: { platform: { select: { name: true } } } } },
   });
   if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
   if (mongoose.connection.readyState !== 1) return res.status(503).json({ message: 'MongoDB is unavailable. Please try again.' });
@@ -39,7 +40,9 @@ async function parseScreenshot(req, res) {
     }
     const text = await extractText(file.bytes);
     const artifact = await ParsedArtifact.findOneAndUpdate(key,
-      { $set: { text, structured: parseEvidence(text), status: 'parsed', error: null, data } },
+      { $set: { text, structured: parseEvidence(text, {
+        platform: screenshot.section.platform.name, section: screenshot.section.sectionName,
+      }), status: 'parsed', error: null, data } },
       { upsert: true, returnDocument: 'after' }).select('-_id').lean();
     await withAuditActor(req.user.id, tx => tx.screenshot.update({ where: { id: screenshot.id }, data: { parseStatus: 'parsed' } }));
     return res.json({ parseStatus: 'parsed', artifact });
