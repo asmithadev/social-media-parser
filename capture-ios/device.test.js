@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const { createHash } = require('node:crypto');
-const { takeScreenshot, captureSection } = require('./device');
+const { takeScreenshot, captureSection, gesture } = require('./device');
 
 test('device command selects a UDID, returns original PNG and removes temporary files', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ios-test-'));
@@ -22,6 +22,12 @@ test('device command selects a UDID, returns original PNG and removes temporary 
     const args = JSON.parse(await fs.readFile(record, 'utf8'));
     assert.deepEqual(args.slice(0, 5), ['developer', 'dvt', 'screenshot', '--udid', '00008110-FAKEDEVICE']);
     await assert.rejects(fs.access(path.dirname(args.at(-1))), { code: 'ENOENT' });
+    await fs.writeFile(tool, '#!' + process.execPath + '\nrequire("node:fs").writeFileSync(' +
+      JSON.stringify(record) + ', JSON.stringify(process.argv.slice(2)));', { mode: 0o700 });
+    await gesture('00008110-FAKEDEVICE', 'drag', [32768, 50000, 32768, 18000]);
+    const gestureArgs = JSON.parse(await fs.readFile(record, 'utf8'));
+    assert.deepEqual(gestureArgs, ['developer', 'core-device', 'universal-hid-service', 'drag', '--udid', '00008110-FAKEDEVICE', '--', '32768', '50000', '32768', '18000']);
+    await assert.rejects(gesture('00008110-FAKEDEVICE', 'tap', [-1, 1]), /coordinates/);
     process.env.IOS_DEVICE_TOOL = path.join(dir, 'missing-tool');
     await assert.rejects(takeScreenshot('00008110-FAKEDEVICE'), /iPhone capture failed/);
     await assert.rejects(takeScreenshot('--invalid'), /UDID/);
