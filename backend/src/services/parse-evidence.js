@@ -1,5 +1,5 @@
 // Basic candidates only: keep the original text and do not guess who sent a message.
-function parseEvidence(text) {
+function parseEvidence(text, context = {}) {
   const usernames = new Set();
   const dates = new Set();
   const messages = [];
@@ -20,6 +20,19 @@ function parseEvidence(text) {
     if (message?.[1].trim()) messages.push({ lineNumber: index + 1, text: message[1].trim() });
   });
 
+  const platform = (context.platform || '').trim().toLowerCase();
+  const supported = ['whatsapp', 'telegram', 'instagram', 'facebook', 'twitter'].includes(platform);
+  if (supported && context.section === 'messages') {
+    const layoutMessages = require('./message-layout')(text, platform);
+    if (layoutMessages.length) {
+      // Keep basic labelled messages outside recognized blocks without duplicates.
+      const remaining = messages.filter(message => !layoutMessages.some(block =>
+        message.lineNumber >= block.lineNumber && message.lineNumber <= block.endLineNumber));
+      for (const message of layoutMessages) dates.add(message.displayedDate);
+      return { parserVersion: 'message-layout-v1', platform, usernames: [...usernames], dates: [...dates],
+        messages: [...layoutMessages, ...remaining].sort((a, b) => a.lineNumber - b.lineNumber) };
+    }
+  }
   return { parserVersion: 'basic-v1', usernames: [...usernames], dates: [...dates], messages };
 }
 
