@@ -85,8 +85,10 @@ and verified previews/downloads with integrity errors shown to the user.
 Local English OCR with Tesseract saves text to MongoDB, supports retries, and
 provides case-scoped text search in the React app. Install `tesseract` before use.
 Basic parsing also saves username, date and labelled message candidates in MongoDB
-and displays them beside the original OCR text. These fields require review;
-platform-specific layouts and automatic sender/date associations are pending.
+and displays them beside the original OCR text. Recognizable WhatsApp/Telegram
+headers and explicit sender/timestamp blocks can produce multiline message
+candidates with sender, displayed date/time and source line ranges. These fields
+require review; visual bubble layouts and identity inference are not implemented.
 Panchnama screens list report versions and support PDF generation, verified
 downloads, reviewer approval, and audited print requests.
 New PDFs include saved OCR text after each screenshot, with messages for pending,
@@ -101,7 +103,7 @@ A basic macOS browser client opens a platform for manual sign-in, then captures
 and uploads the visible page. Its `auto` command visits planned section URLs,
 scrolls and uploads multiple screens. See its
 [setup and usage guide](capture-macos/README.md). Platform-specific menu discovery
-and structured parsing remain to be built. A basic
+and broader visual-layout parsing remain to be built. A basic
 [connected iPhone client](capture-ios/README.md) captures and uploads the current
 screen using pymobiledevice3 after device setup; physical-device verification
 is still pending.
