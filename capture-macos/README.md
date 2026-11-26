@@ -52,6 +52,23 @@ mode first. The client uses existing APIs and does not need database credentials
 
 ## Automatic navigation and scrolling
 
+### Attempt every configured section
+
+After signing in on the intended account page, enter `all`, choose 1-10 screens
+per section, and type `start`. The client attempts every section registered for
+that session's platform in the documented order. It starts from the current page
+for each section and discovers supported links/tabs without per-section URLs.
+It prints a captured/needs-review summary. Missing or ambiguous menus and capture
+errors are recorded as failed outcomes for previously uncaptured sections, with a
+reason requiring manual review. Previously captured outcomes are preserved.
+Earlier uploads remain stored if a later upload fails. The session stays open.
+
+This accounts for every configured section, but does not guarantee capture of
+each platform's content. A menu may be hidden, localized or unavailable; native
+apps and private lists may not expose browser links. The client must report these
+gaps rather than invent paths or claim complete capture. Use manual mode for the
+remaining sections and inspect all images before completing the session.
+
 Browser plans run in this fixed order regardless of entry order: account info,
 posts, messages, timeline, friends, followers, following. Only planned sections
 are captured; unsupported sections still need manual capture or a recorded reason.
