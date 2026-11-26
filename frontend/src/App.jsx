@@ -26,6 +26,7 @@ export default function App() {
 
   return (
     <div className="app-shell" data-theme={theme}>
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="site-header">
         <div className="header-content">
           <div className="brand">
@@ -47,7 +48,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container">
+      <main className="container" id="main-content" tabIndex={-1}>
         {isDemoMode && <p className="demo-notice">Demo mode · All accounts and case records shown here are fictional.</p>}
         {session && session.user.role === 'admin' && (
           <nav className="page-menu" aria-label="Main navigation">
