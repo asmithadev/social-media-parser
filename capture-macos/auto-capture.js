@@ -41,6 +41,7 @@ async function runPlan(api, page, sessionId, plan, options = {}) {
   if (session.status !== 'open' || session.deviceType !== 'macos') throw new Error('Choose an open macOS session.');
   const { sections } = await api('/sessions/' + sessionId + '/sections');
   validatePlan(plan, sections);
+  plan = require('./section-order')(plan, sections);
   const progress = options.onProgress || (() => {});
   const summary = [];
   for (const step of plan) {
