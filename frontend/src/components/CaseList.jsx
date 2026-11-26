@@ -7,6 +7,7 @@ export default function CaseList({ token, onSelectCase }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
+  const [status, setStatus] = useState('all');
 
   useEffect(() => {
     let active = true;
@@ -21,14 +22,19 @@ export default function CaseList({ token, onSelectCase }) {
   }, [token, reload]);
 
   const visibleCases = cases.filter(record =>
-    `${record.caseNumber} ${record.title}`.toLowerCase().includes(search.trim().toLowerCase())
+    `${record.caseNumber} ${record.title}`.toLowerCase().includes(search.trim().toLowerCase()) &&
+    (status === 'all' || record.status === status)
   );
 
   return (
     <section aria-labelledby="cases-title">
       <p className="eyebrow">Case workspace</p>
-      <h1 id="cases-title">Cases</h1>
-      <p className="muted">Choose a case to see its details.</p>
+      <div className="page-heading">
+        <div><h1 id="cases-title">Cases</h1><p className="muted">Your records, captures and next steps in one place.</p></div>
+        <button className="secondary" disabled={loading} onClick={() => setReload(value => value + 1)}>
+          {loading ? 'Refreshing…' : 'Refresh cases'}
+        </button>
+      </div>
       {loading ? <p className="card" role="status">Loading cases…</p> : error ? (
         <div className="card">
           <p className="error" role="alert">{error}</p>
@@ -42,11 +48,18 @@ export default function CaseList({ token, onSelectCase }) {
           <div className="summary-item"><strong>{cases.filter(record => record.status === 'closed').length}</strong><span>Closed cases</span></div>
         </div>
         <div className="card">
-          <label htmlFor="case-search">Search cases</label>
-          <input id="case-search" type="search" placeholder="Case number or title"
-            value={search} onChange={event => setSearch(event.target.value)} />
+          <div className="case-filters">
+            <div><label htmlFor="case-search">Search cases</label>
+              <input id="case-search" type="search" placeholder="Case number or title"
+                value={search} onChange={event => setSearch(event.target.value)} /></div>
+            <div><label htmlFor="case-status-filter">Status</label>
+              <select id="case-status-filter" value={status} onChange={event => setStatus(event.target.value)}>
+                <option value="all">All statuses</option><option value="open">Open</option><option value="closed">Closed</option>
+              </select></div>
+            {(search || status !== 'all') && <button className="secondary" onClick={() => { setSearch(''); setStatus('all'); }}>Clear filters</button>}
+          </div>
           {cases.length === 0 ? <p className="empty-state">No cases are available for your account.</p> :
-            visibleCases.length === 0 ? <p className="empty-state">No cases match your search.</p> : (
+            visibleCases.length === 0 ? <div className="empty-state" role="status"><strong>No matching cases</strong><p>Try another search or clear your filters.</p></div> : (
               <div className="table-container">
                 <table>
                   <caption className="muted">{visibleCases.length} {visibleCases.length === 1 ? 'case' : 'cases'}</caption>
