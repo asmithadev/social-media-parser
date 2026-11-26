@@ -49,8 +49,16 @@ async function main() {
       try {
         const { sections } = await api('/sessions/' + sessionId + '/sections');
         for (const section of sections) console.log(section.id + ': ' + section.sectionName + ' [' + section.status + ']');
-        const choice = (await terminal.question('Section ID, "auto", "menus", "finish", or "quit": ')).trim();
+        const choice = (await terminal.question('Section ID, "all", "auto", "menus", "finish", or "quit": ')).trim();
         if (choice === 'quit') break;
+        if (choice === 'all') {
+          const screens = Number(await terminal.question('Maximum screens per configured section (1-10): '));
+          console.log('Each section starts at the current browser page. Failed discovery is recorded for manual review.');
+          if ((await terminal.question('Type "start" when signed in on the intended account: ')).trim() !== 'start') continue;
+          console.table(await require('./coverage')(api, page, sessionId, screens));
+          console.log('Review all outcomes and screenshots before completing the session.');
+          continue;
+        }
         if (choice === 'menus') {
           const menuHome = page.url();
           const plan = [];
