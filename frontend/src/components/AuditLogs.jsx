@@ -31,6 +31,7 @@ export default function AuditLogs({ token }) {
 
   return (
     <section aria-labelledby="audit-title">
+      <p className="eyebrow">Review the record</p>
       <h1 id="audit-title">Audit logs</h1>
       <p className="muted">Recorded actions across all cases. Only administrators can view this page.</p>
       <AuditVerification token={token} />
