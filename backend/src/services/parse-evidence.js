@@ -21,6 +21,12 @@ function parseEvidence(text, context = {}) {
   });
 
   const platform = (context.platform || '').trim().toLowerCase();
+  if (['facebook', 'twitter', 'instagram', 'telegram', 'whatsapp', 'google'].includes(platform) &&
+    ['account_info', 'posts', 'timeline', 'friends', 'followers', 'following'].includes(context.section)) {
+    return { parserVersion: 'section-fields-v1', platform, section: context.section,
+      usernames: [...usernames], dates: [...dates], messages,
+      ...require('./section-evidence')(text, context.section) };
+  }
   const supported = ['whatsapp', 'telegram', 'instagram', 'facebook', 'twitter'].includes(platform);
   if (supported && context.section === 'messages') {
     const layoutMessages = require('./message-layout')(text, platform);
