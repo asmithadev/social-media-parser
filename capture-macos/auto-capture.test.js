@@ -41,6 +41,25 @@ test('automatic navigation, scrolling, section uploads and failure handling', as
       outcomes.push(endpoint);
     };
     const run = plan => runPlan(api, page, 7, plan, { waitMs: 100 });
+    await t.test('all-section mode attempts every configured section and records missing discovery', async () => {
+      reset();
+      await page.goto(origin + '/menu');
+      let failed;
+      const coverageApi = async (endpoint, method, body) => {
+        if (endpoint.endsWith('/sections')) return { sections: [
+          { id: 1, sectionName: 'posts', status: 'pending' },
+          { id: 2, sectionName: 'messages', status: 'pending' },
+          { id: 3, sectionName: 'friends', status: 'pending' },
+        ] };
+        if (body?.status === 'failed') { failed = { endpoint, body }; return {}; }
+        return api(endpoint, method, body);
+      };
+      const summary = await require('./coverage')(coverageApi, page, 7, 1, () => {});
+      assert.deepEqual(summary.map(row => row.status), ['captured', 'captured', 'needs review']);
+      assert.equal(failed.endpoint, '/sessions/7/sections/3');
+      assert.equal(failed.body.status, 'failed');
+      assert.equal(uploads.length, 2);
+    });
     await t.test('discover and click section links without supplied section URLs', async () => {
       reset();
       await run([
