@@ -26,6 +26,7 @@ export default function CaseList({ token, onSelectCase }) {
 
   return (
     <section aria-labelledby="cases-title">
+      <p className="eyebrow">Case workspace</p>
       <h1 id="cases-title">Cases</h1>
       <p className="muted">Choose a case to see its details.</p>
       {loading ? <p className="card" role="status">Loading cases…</p> : error ? (
@@ -34,6 +35,12 @@ export default function CaseList({ token, onSelectCase }) {
           <button className="secondary" onClick={() => setReload(reload + 1)}>Try again</button>
         </div>
       ) : (
+        <>
+        <div className="case-summary" aria-label="Case overview">
+          <div className="summary-item"><strong>{cases.length}</strong><span>Available cases</span></div>
+          <div className="summary-item"><strong>{cases.filter(record => record.status === 'open').length}</strong><span>Open cases</span></div>
+          <div className="summary-item"><strong>{cases.filter(record => record.status === 'closed').length}</strong><span>Closed cases</span></div>
+        </div>
         <div className="card">
           <label htmlFor="case-search">Search cases</label>
           <input id="case-search" type="search" placeholder="Case number or title"
@@ -59,6 +66,7 @@ export default function CaseList({ token, onSelectCase }) {
               </div>
             )}
         </div>
+        </>
       )}
     </section>
   );
