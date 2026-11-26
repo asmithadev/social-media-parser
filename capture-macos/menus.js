@@ -1,7 +1,7 @@
 // English navigation labels only. Never click follow/unfollow or message-send buttons.
 const labels = {
   posts: ['Posts', 'Tweets'], messages: ['Messages', 'Chats', 'Direct'],
-  account_info: ['Profile', 'About'], friends: ['Friends'], followers: ['Followers'],
+  account_info: ['Profile', 'About', 'Personal info', 'Account info'], friends: ['Friends', 'Contacts'], followers: ['Followers'],
   following: ['Following'], timeline: ['Timeline'],
 };
 
