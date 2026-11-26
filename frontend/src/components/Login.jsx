@@ -22,8 +22,25 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <section className="card login-card" aria-labelledby="login-title">
-      <p className="eyebrow">Your evidence workspace</p>
+    <div className="login-layout">
+      <aside className="login-intro" aria-labelledby="intro-title">
+        <p className="eyebrow"><span className="status-dot" /> A considered approach to evidence</p>
+        <h1 id="intro-title">Every capture.<br />A clearer <em>record.</em></h1>
+        <p className="intro-copy">Bring your case, captures and review into one workspace. Keep the source in sight, from the first screenshot to the final report.</p>
+        <div className="workflow-panel">
+          <div className="workflow-caption"><span>THE EVIDENCE WORKFLOW</span><span aria-hidden="true">↗</span></div>
+          {[
+            ['01', 'Capture with context', 'Connect screenshots to the case and section.'],
+            ['02', 'Check the source', 'Verify file hashes and review extracted text.'],
+            ['03', 'Review the record', 'Prepare a report for independent approval.'],
+          ].map(([number, title, description]) => <div className="workflow-step" key={number}>
+            <span className="step-number">{number}</span><div><strong>{title}</strong><p>{description}</p></div>
+          </div>)}
+          <p className="workflow-note">One case. A documented path forward.</p>
+        </div>
+      </aside>
+      <section className="card login-card" aria-labelledby="login-title">
+      <p className="eyebrow">Welcome to your workspace</p>
       <h1 id="login-title">Sign in</h1>
       <p className="muted">Access your cases and review their details.</p>
       <form onSubmit={handleSubmit}>
@@ -48,6 +65,7 @@ export default function Login({ onLogin }) {
           }} disabled={loading}>Fill demo details</button>
         </div>
       )}
-    </section>
+      </section>
+    </div>
   );
 }
