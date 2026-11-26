@@ -254,3 +254,38 @@ input[type="checkbox"] { min-height: auto; }
   .site-footer { margin: 0 16px; gap: 12px; }
   h1 { font-size: 36px; }
 }
+
+/* Small workspace refinements. */
+.app-shell { display: flex; flex-direction: column; }
+.container { width: 100%; flex: 1; }
+.site-footer { width: calc(100% - 48px); }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.page-heading p { margin-bottom: 0; }
+.page-heading > button { flex-shrink: 0; }
+.case-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+.case-filters > div:first-child { flex: 1; min-width: min(100%, 240px); }
+.case-filters > div:nth-child(2) { width: 180px; }
+.case-filters input[type="search"] { max-width: none; }
+.empty-state { padding: 28px; border: 1px dashed var(--border); border-radius: 10px; text-align: center; }
+.empty-state strong { display: block; color: var(--ink); margin-bottom: 6px; }
+.empty-state p { margin: 0; font-size: 14px; }
+.admin-form p.error, .form-feedback.error { padding: 12px 14px; border-left: 3px solid var(--error); background: var(--soft); border-radius: 6px; }
+.admin-form p.success, .form-feedback.success { padding: 12px 14px; border-left: 3px solid var(--success); background: var(--soft); border-radius: 6px; }
+.screenshot-image { border-radius: 8px; border: 1px solid var(--border); }
+.screenshot-viewer > button { margin-bottom: 16px; }
+.audit-entry-details summary { padding: 6px 0; }
+.admin-forms > .card > h2 { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
+.skip-link { position: fixed; top: 10px; left: 12px; z-index: 10; transform: translateY(-180%); padding: 12px 18px; border-radius: 8px; background: var(--accent); color: var(--accent-text); }
+.skip-link:focus { transform: translateY(0); }
+@media (max-width: 650px) {
+  .page-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .case-filters { align-items: stretch; }
+  .case-filters > div:nth-child(2) { flex: 1; min-width: 140px; }
+  .case-filters > button { align-self: flex-end; }
+  .site-footer { width: calc(100% - 32px); }
+}
+@media (max-width: 650px) {
+  .page-menu button { font-size: 13px; padding: 10px 12px; white-space: nowrap; }
+  .account-menu button { flex-shrink: 0; white-space: nowrap; padding: 10px 12px; font-size: 13px; }
+}
