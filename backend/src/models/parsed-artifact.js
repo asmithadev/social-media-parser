@@ -7,6 +7,10 @@ const schema = new mongoose.Schema({
     type: new mongoose.Schema({
       parserVersion: String,
       platform: String,
+      section: String,
+      profileFields: { type: [{ _id: false, field: String, value: String, lineNumber: Number }], default: undefined },
+      people: { type: [{ _id: false, displayName: String, handle: String, relationship: String, lineNumber: Number }], default: undefined },
+      posts: { type: [{ _id: false, text: String, author: String, displayedDate: String, lineNumber: Number, endLineNumber: Number }], default: undefined },
       visual: {
         type: new mongoose.Schema({
           method: String, incomingSide: String, imageWidth: Number, imageHeight: Number,
