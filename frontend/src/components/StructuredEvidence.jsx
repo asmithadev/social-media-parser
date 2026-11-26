@@ -10,6 +10,19 @@ export default function StructuredEvidence({ structured }) {
       <p><strong>Usernames:</strong> {structured.usernames.length ? structured.usernames.join(', ') : 'None detected.'}</p>
       <p><strong>Date candidates:</strong> {structured.dates.length ? structured.dates.join(', ') : 'None detected.'}</p>
       <h5>Message candidates</h5>
+      {structured.profileFields && <section><h5>Profile field candidates</h5>
+        {structured.profileFields.length ? structured.profileFields.map((field, index) => <p key={index}>
+          {field.field}: {field.value} (OCR line {field.lineNumber})</p>) : <p>No labelled profile fields detected.</p>}
+      </section>}
+      {structured.people && <section><h5>People candidates</h5>
+        {structured.people.length ? structured.people.map((person, index) => <p key={index}>
+          {person.displayName} {person.handle} — {person.relationship} (OCR line {person.lineNumber})</p>) : <p>No supported people rows detected.</p>}
+      </section>}
+      {structured.posts && <section><h5>Post candidates</h5>
+        {structured.posts.length ? structured.posts.map((post, index) => <article key={index}>
+          <p>OCR lines {post.lineNumber} to {post.endLineNumber}; author: {post.author || 'unknown'}; date: {post.displayedDate || 'unknown'}</p>
+          <pre className="ocr-text">{post.text}</pre></article>) : <p>No supported post blocks detected.</p>}
+      </section>}
       {structured.messages.length ? structured.messages.map(message => (
         <div key={message.lineNumber}>
           <p className="muted">OCR line {message.lineNumber}{message.endLineNumber ? ' to ' + message.endLineNumber : ''}</p>
