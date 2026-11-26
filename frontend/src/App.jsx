@@ -11,6 +11,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [page, setPage] = useState('cases');
+  const [theme, setTheme] = useState('light');
 
   async function handleLogin(email, password) {
     const result = await signIn(email, password);
@@ -24,19 +25,25 @@ export default function App() {
   }
 
   return (
-    <>
+    <div className="app-shell" data-theme={theme}>
       <header className="site-header">
         <div className="header-content">
           <div className="brand">
             <span className="brand-mark" aria-hidden="true">EC</span>
             <div>Evidence Capture<small>Social media evidence workspace</small></div>
           </div>
+          <div className="header-actions">
+          <button className="theme-toggle" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} appearance`}>
+            <span aria-hidden="true">{theme === 'light' ? '◐' : '◑'}</span> {theme === 'light' ? 'Dark' : 'Light'}
+          </button>
           {session && (
             <div className="account-menu">
               <span>{session.user.fullName} <span className="role">({session.user.role})</span></span>
               <button className="secondary" onClick={handleLogout}>Sign out</button>
             </div>
           )}
+          </div>
         </div>
       </header>
 
@@ -67,6 +74,7 @@ export default function App() {
             onBack={() => setSelectedCaseId(null)} />
         )}
       </main>
-    </>
+      <footer className="site-footer"><span>Evidence Capture</span><span>Capture · Verify · Review</span></footer>
+    </div>
   );
 }
