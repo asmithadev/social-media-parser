@@ -23,6 +23,7 @@ export default function Login({ onLogin }) {
 
   return (
     <section className="card login-card" aria-labelledby="login-title">
+      <p className="eyebrow">Your evidence workspace</p>
       <h1 id="login-title">Sign in</h1>
       <p className="muted">Access your cases and review their details.</p>
       <form onSubmit={handleSubmit}>
