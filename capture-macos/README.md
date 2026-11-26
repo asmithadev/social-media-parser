@@ -52,6 +52,10 @@ mode first. The client uses existing APIs and does not need database credentials
 
 ## Automatic navigation and scrolling
 
+Browser plans run in this fixed order regardless of entry order: account info,
+posts, messages, timeline, friends, followers, following. Only planned sections
+are captured; unsupported sections still need manual capture or a recorded reason.
+
 After signing in to the platform in the opened browser, enter `auto` in the
 terminal menu. Build a small plan by supplying:
 
