@@ -24,6 +24,7 @@ export default function CaseDetails({ caseId, token, onBack, canEdit, user }) {
   return (
     <section aria-labelledby="details-title">
       <button className="secondary back-button" onClick={onBack}>← Back to cases</button>
+      <p className="eyebrow">Case workspace / {record?.caseNumber || 'Details'}</p>
       <h1 id="details-title">Case details</h1>
       {loading ? <p className="card" role="status">Loading case details…</p> : error ? (
         <p className="card error" role="alert">{error}</p>
