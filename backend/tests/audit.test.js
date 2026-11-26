@@ -426,6 +426,19 @@ test('PostgreSQL audit trail and API', {
         const savedVisual = (await ok('GET', '/api/screenshots/' + chatScreenshot.id + '/parsed-artifact', 'reviewer')).artifact.structured.visual;
         assert.equal(savedVisual.candidates[1].x, 750);
         assert.equal(savedVisual.incomingSide, 'left');
+        const profileSection = await withAuditActor(users.admin.id, tx => tx.platformSection.create({
+          data: { platformId: chatPlatform.id, sectionName: 'account_info' },
+        }));
+        const profileUpload = await fetch(origin + '/api/sessions/' + chatSession.id + '/screenshots?sectionId=' + profileSection.id + '&sequenceNo=1', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + tokens.examiner, 'Content-Type': 'image/png' }, body: bytes,
+        });
+        assert.equal(profileUpload.status, 201);
+        const profileId = (await profileUpload.json()).screenshot.id;
+        fs.writeFileSync(slow, '#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>process.stdout.write("Name: Fictional Person\\nBio: Training only"));\n', { mode: 0o700 });
+        const profileParsed = await ok('POST', '/api/screenshots/' + profileId + '/parse', 'examiner');
+        assert.equal(profileParsed.artifact.structured.profileFields[0].value, 'Fictional Person');
+        const profileStored = (await ok('GET', '/api/screenshots/' + profileId + '/parsed-artifact', 'reviewer')).artifact;
+        assert.deepEqual(profileStored.structured, profileParsed.artifact.structured);
         assert.equal((await request('POST', '/api/screenshots/' + chatScreenshot.id + '/parse', 'examiner', {
           visual: { incomingSide: 'left', region: { x: 0.8, y: 0, width: 0.5, height: 1 } },
         })).status, 400);
