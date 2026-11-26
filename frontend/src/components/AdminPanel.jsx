@@ -26,6 +26,7 @@ export default function AdminPanel({ token }) {
 
   return (
     <section aria-labelledby="admin-title">
+      <p className="eyebrow">Manage the workspace</p>
       <h1 id="admin-title">Admin tools</h1>
       <p className="muted">Create a case, add team members, and assign them to cases.</p>
       {loading ? <p role="status">Loading admin tools…</p> : error ? (
