@@ -27,7 +27,10 @@ export default function App() {
     <>
       <header className="site-header">
         <div className="header-content">
-          <div className="brand">Evidence Capture</div>
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">EC</span>
+            <div>Evidence Capture<small>Social media evidence workspace</small></div>
+          </div>
           {session && (
             <div className="account-menu">
               <span>{session.user.fullName} <span className="role">({session.user.role})</span></span>
