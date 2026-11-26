@@ -91,6 +91,8 @@ candidates with sender, displayed date/time and source line ranges. These fields
 require review. Optional chat-area OCR coordinates provide tentative left/right
 and incoming/outgoing text-line positions; full bubble segmentation and sender
 identity inference are not implemented.
+Section-specific OCR also saves labelled profile fields, post blocks and
+handle-based people-list candidates. Unmatched layouts remain in raw OCR for review.
 Panchnama screens list report versions and support PDF generation, verified
 downloads, reviewer approval, and audited print requests.
 New PDFs include saved OCR text after each screenshot, with messages for pending,
@@ -104,8 +106,10 @@ storage outside the database.
 A basic macOS browser client opens a platform for manual sign-in, then captures
 and uploads the visible page. Its `auto` command visits planned section URLs,
 scrolls and uploads multiple screens. The `menus` command discovers unique visible
-English section links/tabs without supplied section URLs. See its
-[setup and usage guide](capture-macos/README.md). Broader platform menu rules
+English section links/tabs without supplied section URLs.
+The `all` command attempts every configured section in fixed order and records
+discovery/capture gaps for manual review; this does not guarantee full platform coverage.
+See the [setup and usage guide](capture-macos/README.md). Broader platform menu rules
 and visual-layout parsing remain to be built. A basic
 [connected iPhone client](capture-ios/README.md) captures and uploads the current
 screen using pymobiledevice3 after device setup. Its `auto` plans tap configured
