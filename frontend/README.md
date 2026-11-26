@@ -298,6 +298,29 @@ arrangements; representative platform screenshots still need manual validation.
 Add more rules only with examples from the target layout. Raw OCR and screenshots
 remain available for review; PDF/search output continues using raw OCR.
 
+### Profiles, posts and people lists
+
+For Facebook, Twitter, Instagram, Telegram, WhatsApp and Google registrations,
+OCR now applies section-specific candidate rules:
+
+- `account_info`: labelled fields such as `Name:`, `Bio:`, `Email:`, `Phone:`,
+  `Website:`, `Location:`, `Joined:` and `Birthday:` with original line numbers.
+- `posts`/`timeline`: blocks starting with `Post:`, `Tweet:` or `Caption:`.
+  Following `Author:` and `Date:`/`Posted:` lines become optional metadata.
+  Blank lines, a new post marker or an exact interaction label end a block.
+- `friends`/`followers`/`following`: standalone `@handle` rows or
+  `Display Name @handle` rows, with the section as the relationship candidate.
+
+Results are saved as `structured.profileFields`, `structured.posts` and
+`structured.people`, displayed below the original OCR, and marked with parser
+version `section-fields-v1`. Existing artifacts require another OCR run. No new
+API endpoint or PostgreSQL migration is required. Search and PDFs retain raw OCR.
+These are explicit-text rules shared across the six platform names, not six
+validated screenshot adapters. Unlabelled names, post cards and counts are not
+promoted to confirmed people or posts. Empty results mean no rule matched, not
+that the source contains no evidence. Representative platform screenshots are
+still required to validate or extend the rules.
+
 ### Optional chat position analysis
 
 For screenshots in a `messages` section, enable **Analyze chat positions**, choose
