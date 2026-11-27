@@ -4,8 +4,19 @@ const connectMongo = require('./config/mongo-config');
 
 const PORT = process.env.PORT || 3000;
 
+function validateRuntimeConfig() {
+  const missing = ['DATABASE_URL', 'MONGO_URI'].filter(name => !process.env[name]);
+  if (missing.length) throw new Error('Missing required environment settings: ' + missing.join(', '));
+  if (process.env.NODE_ENV === 'production' &&
+      (Buffer.byteLength(process.env.JWT_SECRET || '', 'utf8') < 32 ||
+       /replace[_-]with|change[_-]me|example/i.test(process.env.JWT_SECRET || ''))) {
+    throw new Error('Set JWT_SECRET to a unique random value of at least 32 bytes before starting in production.');
+  }
+}
+
 const startServer = async () => {
   try {
+    validateRuntimeConfig();
     await connectMongo();
 
     app.listen(PORT, () => {
