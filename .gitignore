@@ -6,6 +6,7 @@ evidence/
 # Local configuration and build output
 .env.*
 !.env.example
+!.env.hosting.example
 /backend/logs/*
 !/backend/logs/.gitkeep
 /frontend/dist/

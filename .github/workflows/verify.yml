@@ -1,0 +1,81 @@
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: parser
+          POSTGRES_PASSWORD: parser
+          POSTGRES_DB: parser_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U parser -d parser_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      mongo:
+        image: mongo:8.0
+        ports: [27017:27017]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://parser:parser@localhost:5432/parser_test?schema=public
+      TEST_MONGO_URI: mongodb://localhost:27017
+      DATABASE_URL: postgresql://parser:parser@localhost:5432/parser_test?schema=public
+      MONGO_URI: mongodb://localhost:27017/social_media_parser_test
+      JWT_SECRET: integration-test-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client tesseract-ocr tesseract-ocr-eng
+      - run: npm ci
+        working-directory: backend
+      - run: npx prisma generate
+        working-directory: backend
+      - run: npm test
+        working-directory: backend
+
+  capture-clients:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: capture-macos/package-lock.json
+      - run: npm ci
+        working-directory: capture-macos
+      - run: npx playwright install --with-deps chromium
+        working-directory: capture-macos
+      - run: npm test
+        working-directory: capture-macos
+      - run: node --test capture-ios/*.test.js

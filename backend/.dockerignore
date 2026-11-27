@@ -1,0 +1,6 @@
+node_modules
+.env
+evidence
+npm-debug.log
+coverage
+*.log

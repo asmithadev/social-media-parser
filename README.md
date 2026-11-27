@@ -159,3 +159,8 @@ Check `http://localhost:3000/health` after startup; both databases should report
 Configure separate deployment roots when both apps are ready. The Express API
 runs from `backend/`. The React build will run from `frontend/`. Configure
 the frontend's public API base URL and the API's allowed frontend origin.
+
+For a Docker Compose host setup with PostgreSQL, MongoDB, persistent evidence
+storage, Tesseract, and an Nginx frontend/API proxy, see
+[`docs/hosting.md`](docs/hosting.md). The Compose ports bind to loopback; place a
+TLS reverse proxy in front before allowing public access.
