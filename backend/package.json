@@ -8,9 +8,6 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/asmithadev/social-media-parser.git"
@@ -24,7 +21,8 @@
   },
   "homepage": "https://github.com/asmithadev/social-media-parser#readme",
   "dependencies": {
-    "@prisma/client": "6.19.3",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.10",
@@ -34,17 +32,22 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.12.1",
     "pdfkit": "^0.20.2",
+    "pg": "^8.23.1",
     "winston": "^3.19.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "prisma": "6.19.3"
+    "nodemon": "3.1.11",
+    "prisma": "7.10.1"
+  },
+  "overrides": {
+    "effect": "3.22.5"
   },
   "allowScripts": {
-    "@prisma/client@6.19.3": true,
-    "@prisma/engines@6.19.3": true,
     "bcrypt@6.0.0": true,
-    "prisma@6.19.3": true
+    "@prisma/client@7.10.1": true,
+    "@prisma/engines@7.10.1": true,
+    "@prisma/adapter-pg@7.10.1": true,
+    "prisma@7.10.1": true
   }
 }

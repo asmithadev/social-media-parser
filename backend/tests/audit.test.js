@@ -9,6 +9,7 @@ test('PostgreSQL audit trail and API', {
   skip: !process.env.TEST_DATABASE_URL && 'Set TEST_DATABASE_URL to a PostgreSQL test database; psql must be installed.',
 }, async t => {
   const { PrismaClient } = require('@prisma/client');
+  const { PrismaPg } = require('@prisma/adapter-pg');
   const schema = 'audit_test_' + randomUUID().replaceAll('-', '');
   const baseUrl = new URL(process.env.TEST_DATABASE_URL);
   baseUrl.searchParams.delete('schema');
@@ -16,7 +17,7 @@ test('PostgreSQL audit trail and API', {
   url.searchParams.set('schema', schema);
   process.env.DATABASE_URL = url.toString();
   process.env.JWT_SECRET = 'audit-integration-test-secret';
-  const setup = new PrismaClient({ datasourceUrl: baseUrl.toString() });
+  const setup = new PrismaClient({ adapter: new PrismaPg({ connectionString: baseUrl.toString() }) });
   const prisma = require('../src/config/db-config');
   const { withAuditActor, recordLogin } = require('../src/services/audit');
   let server;
