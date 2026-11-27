@@ -4,6 +4,7 @@ const http = require('node:http');
 const { createHash } = require('node:crypto');
 const { chromium } = require('playwright');
 const { createApi, captureSection } = require('./api');
+const launchTestBrowser = require('./test-browser');
 
 test('capture a fictional browser page and upload it to the correct section', async t => {
   let uploadFails = false;
@@ -56,7 +57,7 @@ test('capture a fictional browser page and upload it to the correct section', as
     await new Promise(resolve => server.once('listening', resolve));
     const origin = 'http://127.0.0.1:' + server.address().port;
     const api = createApi(origin + '/api', 'fictional-token');
-    browser = await chromium.launch({ headless: true, channel: 'chromium' });
+    browser = await launchTestBrowser(chromium, { headless: true });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(origin + '/fixture?token=not-evidence#fragment');
 

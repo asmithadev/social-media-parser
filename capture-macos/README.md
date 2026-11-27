@@ -161,4 +161,6 @@ Tests use a headless browser, a fictional local page and a temporary HTTP test
 server. They check PNG uploads, section numbering, token separation, rejected
 uploads, hash mismatches and partial failures. They do not access social accounts
 or modify the application database. Platform sign-in and the visible browser flow
-still need a manual check on the target Mac.
+still need a manual check on the target Mac. If Chromium is installed outside
+Playwright's browser cache, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its
+executable path to run the tests with that Chromium-compatible browser.

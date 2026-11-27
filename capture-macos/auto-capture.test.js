@@ -4,6 +4,7 @@ const http = require('node:http');
 const { createHash } = require('node:crypto');
 const { chromium } = require('playwright');
 const { runPlan, validatePlan } = require('./auto-capture');
+const launchTestBrowser = require('./test-browser');
 
 test('automatic navigation, scrolling, section uploads and failure handling', async t => {
   const server = http.createServer((req, res) => {
@@ -21,7 +22,7 @@ test('automatic navigation, scrolling, section uploads and failure handling', as
     server.listen(0, '127.0.0.1');
     await new Promise(resolve => server.once('listening', resolve));
     const origin = 'http://127.0.0.1:' + server.address().port;
-    browser = await chromium.launch({ headless: true, channel: 'chromium' });
+    browser = await launchTestBrowser(chromium, { headless: true });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     let uploads, outcomes, failAt;
     function reset() { uploads = []; outcomes = []; failAt = Infinity; }
