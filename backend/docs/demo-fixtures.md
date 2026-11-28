@@ -1,6 +1,6 @@
 # Demo fixtures
 
-The demo seeder creates a fictional data set for exercising the API and UI. It is separate from `db:seed` and is not called by the Vercel build.
+The demo seeder creates a fictional data set for exercising the API and UI. It is separate from `db:seed`. The Vercel backend build calls it, but it skips unless `SEED_DEMO_DATA=true` is set.
 
 ## Run locally
 
@@ -17,7 +17,7 @@ The demo seeder creates a fictional data set for exercising the API and UI. It i
    DEMO_SEED_PASSWORD='choose-a-unique-local-demo-password' npm run db:seed:demo
    ```
 
-The seed refuses to write to non-loopback databases, Vercel, or Vercel Blob unless `ALLOW_DEMO_DATA=true` is explicitly set. Do not set that override for production. If you explicitly opt into a remote test environment, also set the password only in that environment; never commit it.
+The seed refuses to write to non-loopback databases, Vercel, or Vercel Blob unless `ALLOW_DEMO_DATA=true` is explicitly set. For hosted production demo data, set `SEED_DEMO_DATA=true`, `ALLOW_DEMO_DATA=true`, and `DEMO_SEED_PASSWORD` in the backend Vercel Production environment, then redeploy. Use a unique password of 16–72 UTF-8 bytes; never commit it. For Preview and Development, leave `SEED_DEMO_DATA` unset so demo records are not inserted there.
 
 The command is safe to rerun: it locates records using stable `DEMO-*` identifiers and does not delete or reset existing records. The two demo users are `demo.examiner@example.test` and `demo.reviewer@example.test`; both use the value supplied through `DEMO_SEED_PASSWORD`. They are ordinary active users and should only be created in an isolated test environment.
 

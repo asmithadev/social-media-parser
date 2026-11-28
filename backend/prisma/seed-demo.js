@@ -209,6 +209,10 @@ async function fixtureReport(panchnama, examinerId, artifact) {
 }
 
 async function main() {
+  if (process.env.SEED_DEMO_DATA !== 'true') {
+    console.log('Demo fixture seeding is disabled (set SEED_DEMO_DATA=true to enable).');
+    return;
+  }
   assertSafeTarget();
   await connectMongo();
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
