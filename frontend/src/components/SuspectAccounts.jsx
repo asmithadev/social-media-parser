@@ -6,6 +6,7 @@ export default function SuspectAccounts({ suspectId, token, canEdit }) {
   const [platforms, setPlatforms] = useState([]);
   const [platformId, setPlatformId] = useState('');
   const [handle, setHandle] = useState('');
+  const [platformAccountId, setPlatformAccountId] = useState('');
   const [profileUrl, setProfileUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,10 +32,13 @@ export default function SuspectAccounts({ suspectId, token, canEdit }) {
     setSaving(true); setError(''); setMessage('');
     try {
       const account = await createAccount(token, suspectId, {
-        platformId: Number(platformId), handle: handle.trim(), profileUrl: profileUrl.trim() || null,
+        platformId: Number(platformId),
+        handle: handle.trim(),
+        platformAccountId: platformAccountId.trim() || null,
+        profileUrl: profileUrl.trim() || null,
       });
       setAccounts([...accounts, account]);
-      setHandle(''); setProfileUrl('');
+      setHandle(''); setPlatformAccountId(''); setProfileUrl('');
       setMessage('Social account registered.');
     } catch (error) {
       setError(error.message);
@@ -57,11 +61,12 @@ export default function SuspectAccounts({ suspectId, token, canEdit }) {
         <div className="table-container">
           <table>
             <caption className="muted">Social accounts for the selected suspect</caption>
-            <thead><tr><th>Platform</th><th>Handle</th><th>Profile</th></tr></thead>
+            <thead><tr><th>Platform</th><th>Handle</th><th>Platform account ID</th><th>Profile</th></tr></thead>
             <tbody>{accounts.map(account => (
               <tr key={account.id}>
                 <td>{platforms.find(platform => platform.id === account.platformId)?.name || `Platform #${account.platformId}`}</td>
                 <td className="account-handle">{account.handle}</td>
+                <td>{account.platformAccountId || 'Not provided'}</td>
                 <td>{account.profileUrl ? <a href={account.profileUrl} target="_blank" rel="noopener noreferrer">Open profile</a> : 'Not provided'}</td>
               </tr>
             ))}</tbody>
@@ -81,6 +86,8 @@ export default function SuspectAccounts({ suspectId, token, canEdit }) {
               </select>
               <label htmlFor="account-handle">Handle or username</label>
               <input id="account-handle" required maxLength={150} value={handle} onChange={event => setHandle(event.target.value)} />
+              <label htmlFor="account-platform-id">Permanent platform account ID (optional)</label>
+              <input id="account-platform-id" maxLength={100} value={platformAccountId} onChange={event => setPlatformAccountId(event.target.value)} />
               <label htmlFor="account-profile">Profile URL (optional, http:// or https://)</label>
               <input id="account-profile" type="url" value={profileUrl} onChange={event => setProfileUrl(event.target.value)} />
               <button type="submit">{saving ? 'Registering…' : 'Register account'}</button>
