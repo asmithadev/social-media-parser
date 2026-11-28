@@ -12,7 +12,8 @@
     "start": "node src/server.js",
     "vercel-build": "npx prisma generate",
     "db:deploy": "npx prisma migrate deploy",
-    "db:seed": "npx prisma db seed"
+    "db:seed": "npx prisma db seed",
+    "db:seed:demo": "node prisma/seed-demo.js"
   },
   "repository": {
     "type": "git",
