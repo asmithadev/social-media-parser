@@ -12,6 +12,12 @@ BigInt.prototype.toJSON = function () {
 };
 
 const app = express();
+const getSafeErrorDetails = error => ({
+  name: typeof error?.name === 'string' ? error.name : 'Error',
+  code: typeof error?.code === 'string' ? error.code : undefined,
+  causeCode: typeof error?.cause?.code === 'string' ? error.cause.code : undefined,
+  databaseCode: typeof error?.meta?.code === 'string' ? error.meta.code : undefined,
+});
 const allowedOrigins = (process.env.FRONTEND_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
@@ -45,7 +51,10 @@ app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     postgres = 'connected';
-  } catch {}
+  } catch (error) {
+    // Log only error identifiers; never include connection strings or SQL values.
+    console.error('PostgreSQL readiness check failed', getSafeErrorDetails(error));
+  }
   const mongodb = mongoose.connection.readyState === 1 ? 'connected' : 'unavailable';
   const ready = postgres === 'connected' && mongodb === 'connected';
   return res.status(ready ? 200 : 503).json({
@@ -75,6 +84,11 @@ app.use('/api', require('./routes/report.routes'));
 
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
+  console.error('API request failed', {
+    method: req.method,
+    route: req.route?.path ? `${req.baseUrl}${req.route.path}` : 'unmatched',
+    ...getSafeErrorDetails(error),
+  });
   if (error.type === 'entity.too.large') {
     return res.status(413).json({ message: 'Request body is too large.' });
   }
