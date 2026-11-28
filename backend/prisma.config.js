@@ -8,6 +8,8 @@ module.exports = defineConfig({
     seed: 'node prisma/seed.js',
   },
   datasource: {
-    url: process.env.DATABASE_URL || process.env.POSTGRES_URL || '',
+    // Use Neon’s direct connection for schema changes; the pooled URL is for
+    // serverless application traffic.
+    url: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || process.env.POSTGRES_URL || '',
   },
 });
