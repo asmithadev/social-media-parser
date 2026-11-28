@@ -12,12 +12,22 @@ BigInt.prototype.toJSON = function () {
 };
 
 const app = express();
-const getSafeErrorDetails = error => ({
-  name: typeof error?.name === 'string' ? error.name : 'Error',
-  code: typeof error?.code === 'string' ? error.code : undefined,
-  causeCode: typeof error?.cause?.code === 'string' ? error.cause.code : undefined,
-  databaseCode: typeof error?.meta?.code === 'string' ? error.meta.code : undefined,
-});
+const getSafeErrorDetails = error => {
+  const databaseCause = error?.meta?.driverAdapterError?.cause;
+  return {
+    name: typeof error?.name === 'string' ? error.name : 'Error',
+    code: typeof error?.code === 'string' ? error.code : undefined,
+    causeCode: typeof error?.cause?.code === 'string' ? error.cause.code : undefined,
+    databaseCode: typeof error?.meta?.code === 'string'
+      ? error.meta.code
+      : typeof databaseCause?.code === 'string'
+        ? databaseCause.code
+        : typeof databaseCause?.originalCode === 'string'
+          ? databaseCause.originalCode
+          : undefined,
+    databaseErrorKind: typeof databaseCause?.kind === 'string' ? databaseCause.kind : undefined,
+  };
+};
 const allowedOrigins = (process.env.FRONTEND_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
