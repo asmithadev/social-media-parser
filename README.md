@@ -164,3 +164,5 @@ For a Docker Compose host setup with PostgreSQL, MongoDB, persistent evidence
 storage, Tesseract, and an Nginx frontend/API proxy, see
 [`docs/hosting.md`](docs/hosting.md). The Compose ports bind to loopback; place a
 TLS reverse proxy in front before allowing public access.
+
+For separate Vercel projects, see the [Vercel deployment guide](docs/vercel-deployment.md).

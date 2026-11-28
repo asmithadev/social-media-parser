@@ -5,7 +5,10 @@ const connectMongo = require('./config/mongo-config');
 const PORT = process.env.PORT || 3000;
 
 function validateRuntimeConfig() {
-  const missing = ['DATABASE_URL', 'MONGO_URI'].filter(name => !process.env[name]);
+  const missing = [
+    ['DATABASE_URL', 'POSTGRES_URL'],
+    ['MONGO_URI', 'MONGODB_URI'],
+  ].filter(names => !names.some(name => process.env[name])).map(names => names[0]);
   if (missing.length) throw new Error('Missing required environment settings: ' + missing.join(', '));
   if (process.env.NODE_ENV === 'production' &&
       (Buffer.byteLength(process.env.JWT_SECRET || '', 'utf8') < 32 ||

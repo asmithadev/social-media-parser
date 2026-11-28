@@ -11,7 +11,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install
 COPY prisma ./prisma
 RUN ./node_modules/.bin/prisma generate
 COPY src ./src

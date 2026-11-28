@@ -1,5 +1,4 @@
 const { createHash, randomUUID } = require('node:crypto');
-const { mkdir, readFile, realpath, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const { z } = require('zod');
 const ParsedArtifact = require('../models/parsed-artifact');
@@ -7,6 +6,7 @@ const recordId = require('../utils/record-id');
 const prisma = require('../config/db-config');
 const { caseScope, readInput, id, writeRecord } = require('../utils/records');
 const { withAuditActor } = require('../services/audit');
+const { readEvidenceBytes, writeEvidence } = require('../services/evidence-storage');
 
 async function listSessions(req, res) {
   const input = readInput(req, res, ['panchnamaId']);
@@ -259,8 +259,6 @@ async function uploadScreenshot(req, res) {
   const { sectionId, sequenceNo, sourceUrl } = query.data;
   const sha256Hash = createHash('sha256').update(bytes).digest('hex');
   const filePath = path.join('screenshots', randomUUID() + '.png');
-  const absolutePath = path.resolve(process.env.EVIDENCE_DIR || 'evidence', filePath);
-
   let result;
   try {
     result = await withAuditActor(req.user.id, async tx => {
@@ -286,8 +284,7 @@ async function uploadScreenshot(req, res) {
         data: { sessionId, platformSectionId: sectionId, sequenceNo, sourceUrl, sha256Hash, filePath },
         omit: { filePath: true },
       });
-      await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });
-      await writeFile(absolutePath, bytes, { flag: 'wx', mode: 0o600, flush: true });
+      await writeEvidence(filePath, bytes, 'image/png');
       return { screenshot };
     });
   } catch (error) {
@@ -311,21 +308,9 @@ async function downloadScreenshot(req, res) {
   });
   if (!screenshot) return res.status(404).json({ message: 'Screenshot not found.' });
 
-  let bytes;
-  try {
-    const root = await realpath(process.env.EVIDENCE_DIR || 'evidence');
-    const target = await realpath(path.resolve(root, screenshot.filePath));
-    const relative = path.relative(root, target);
-    if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
-      return res.status(404).json({ message: 'Screenshot file not found.' });
-    }
-    bytes = await readFile(target);
-  } catch (error) {
-    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
-      return res.status(404).json({ message: 'Screenshot file not found.' });
-    }
-    throw error;
-  }
+  const stored = await readEvidenceBytes(screenshot.filePath);
+  if (!stored.bytes) return res.status(stored.status).json({ message: stored.message });
+  const { bytes } = stored;
 
   const hash = createHash('sha256').update(bytes).digest('hex');
   if (hash !== screenshot.sha256Hash) {

@@ -1,5 +1,4 @@
 const { createHash, randomUUID } = require('node:crypto');
-const { mkdir, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const renderReport = require('../utils/report-pdf');
 const readEvidence = require('../utils/evidence-file');
@@ -7,6 +6,7 @@ const { withAuditActor } = require('../services/audit');
 const prisma = require('../config/db-config');
 const ParsedArtifact = require('../models/parsed-artifact');
 const { caseScope, readInput } = require('../utils/records');
+const { writeEvidence } = require('../services/evidence-storage');
 
 function panchnamaScope(user) {
   return { assignment: { case: caseScope(user) } };
@@ -89,14 +89,12 @@ async function generateReport(req, res) {
     if (!rendered.bytes) return rendered;
 
     const filePath = path.join('reports', randomUUID() + '.pdf');
-    const absolutePath = path.resolve(process.env.EVIDENCE_DIR || 'evidence', filePath);
     const sha256Hash = createHash('sha256').update(rendered.bytes).digest('hex');
-    await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });
     const report = await tx.report.create({
       data: { panchnamaId: record.id, versionNo, filePath, sha256Hash, generatedBy: req.user.id },
       omit: { filePath: true },
     });
-    await writeFile(absolutePath, rendered.bytes, { flag: 'wx', mode: 0o600, flush: true });
+    await writeEvidence(filePath, rendered.bytes, 'application/pdf');
     return { report };
   }, { timeout: 30000 });
 

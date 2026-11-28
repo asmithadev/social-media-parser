@@ -1,12 +1,18 @@
 {
   "name": "social-media-parser",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "description": "A tool that automatically captures and documents the social media accounts of an accused or suspect during an investigation, so examiners don't have to take and organise screenshots by hand.",
   "main": "index.js",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "vercel-build": "npx prisma generate",
+    "db:deploy": "npx prisma migrate deploy",
+    "db:seed": "npx prisma db seed"
   },
   "repository": {
     "type": "git",
@@ -21,6 +27,7 @@
   },
   "homepage": "https://github.com/asmithadev/social-media-parser#readme",
   "dependencies": {
+    "@vercel/blob": "^2.3.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "bcrypt": "^6.0.0",
@@ -34,7 +41,8 @@
     "pdfkit": "^0.20.2",
     "pg": "^8.23.1",
     "winston": "^3.19.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "nodemon": "3.1.11",
